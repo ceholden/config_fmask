@@ -55,13 +55,19 @@ class config_fmask:
         # Create the dialog (after translation) and keep reference
         self.dlg = FmaskDialog()
 
-    def init_toolbar(self):
+    def initGui(self):
         """ Create toolbar item for plugin """
         # Dialog button
-        self.show_dialog = QtCore.QAction(QtGui.QIcon(
-            ':/plugins/config_fmask/icon.png', self.iface.mainWindow()))
+        self.show_dialog = QtGui.QAction(QtGui.QIcon(
+            ':/plugins/config_fmask/icon.png'), 
+            'Test Fmask Parameters',
+            self.iface.mainWindow())
         self.show_dialog.triggered.connect(self.show_fmask_dialog)
         self.iface.addToolBarIcon(self.show_dialog)
+
+    def show_fmask_dialog(self):
+        """ Show dialog window """
+        self.dlg.exec_()
 
     def unload(self):
         """ Shutdown by removing icons and disconnecting signals """
@@ -69,7 +75,7 @@ class config_fmask:
         self.iface.removeToolBarIcon(self.show_dialog)
 
         # Disconnect signals
-        self.show_dialog.disconnect()
+        self.show_dialog.triggered.disconnect()
 
     # run method that performs all the real work
     def run(self):
