@@ -31,6 +31,9 @@ from ui_config_fmask import Ui_config_fmask
 
 from py_fmask import mtl2dict
 
+###TODO
+from fmask_cloud_masking import plcloud
+
 class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     symbology = {
@@ -42,7 +45,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     }
 
     enable_symbology = [False, False, True, True, True]
-
+    mtl_file = ''
     mtl = {}
 
     def __init__(self):
@@ -74,6 +77,11 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.get_available_drivers()
         # Populate QComboBox with available drivers
         self.cbox_formats.addItems(self.drivers)
+
+        ### Configure cloud probability slider and label
+        self.lab_cloud_prob_val.setText("{0:.2f}%".format(
+            self.slider_cloud_prob.value() / 10.0))
+        self.slider_cloud_prob.valueChanged.connect(self.update_cloud_prob)
 
         ### Enable / disable color picking options
         self.symbology_on_off()
@@ -112,7 +120,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Save current path
         current_path = str(self.edit_MTL.text())
         # Open QFileDialog
-        filename = QtGui.QFileDialog.getOpenFileName(self, 'Locate MTL file',
+        self.mtl_file = QtGui.QFileDialog.getOpenFileName(self,
+            'Locate MTL file',
             os.path.dirname(current_path),
             '*MTL.txt')
 
@@ -124,6 +133,13 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             raise
 
         self.update_table_MTL()
+
+    @QtCore.pyqtSlot(int)
+    def update_cloud_prob(self, value):
+        """ Update slider's associated label with each value update """
+        print 'Updated to value {v}'.format(v=value)
+        self.lab_cloud_prob_val.setText("{0:.2f}%".format(
+            self.slider_cloud_prob.value() / 10.0))
 
     @QtCore.pyqtSlot()
     def symbology_on_off(self):
@@ -223,7 +239,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
             self.table_MTL.setItem(row, 0, _key)
             self.table_MTL.setItem(row, 1, _value)
-
 
 
     def get_available_drivers(self):
