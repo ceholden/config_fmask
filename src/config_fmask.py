@@ -31,7 +31,7 @@ from qgis.core import *
 import resources_rc
 
 # Import the code for the dialog
-from fmask_dialog.py import FmaskDialog
+from fmask_dialog import FmaskDialog
 
 class config_fmask:
 
