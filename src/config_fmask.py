@@ -41,16 +41,16 @@ class config_fmask:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
-        locale = QSettings().value("locale/userLocale")[0:2]
+        locale = QtCore.QSettings().value("locale/userLocale")[0:2]
         localePath = os.path.join(self.plugin_dir, 'i18n',
             'config_fmask_{}.qm'.format(locale))
 
         if os.path.exists(localePath):
-            self.translator = QTranslator()
+            self.translator = QtCore.QTranslator()
             self.translator.load(localePath)
 
             if qVersion() > '4.3.3':
-                QCoreApplication.installTranslator(self.translator)
+                QtCore.QCoreApplication.installTranslator(self.translator)
 
         # Create the dialog (after translation) and keep reference
         self.dlg = FmaskDialog()
