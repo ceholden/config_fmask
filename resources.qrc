@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/config_fmask" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
