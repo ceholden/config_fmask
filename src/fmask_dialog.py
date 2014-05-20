@@ -34,6 +34,7 @@ from py_fmask import mtl2dict
 ###TODO
 from fmask_cloud_masking import plcloud
 
+
 class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     symbology = {
@@ -202,7 +203,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         if button_role == QtGui.QDialogButtonBox.AcceptRole:
             print 'Accept'
         elif button_role == QtGui.QDialogButtonBox.ApplyRole:
-            print 'Apply'
+            print "Apply"
+            plcloud = self.slider_cloud_prob.value() / 10.0
+            self.do_plcloud(plcloud)
         elif button_role == QtGui.QDialogButtonBox.HelpRole:
             print 'TODO - Help information'
         elif button_role == QtGui.QDialogButtonBox.ResetRole:
@@ -282,6 +285,28 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 #            _driver = gdal.GetDriver(i)
 #            if _driver.GetMetadata().get('DCAP_CREATE') == 'YES':
 #                self.drivers.append(_driver.GetDescription())
+
+    def do_plcloud(self, cloud_prob):
+        # Find the Landsat spacecraft number
+        landsat_num = int(self.mtl['SPACECRAFT_ID'][-1])
+
+        print cloud_prob
+        print landsat_num
+        zen,azi,ptm,Temp,t_templ,t_temph, \
+            WT,Snow,Cloud,Shadow, \
+            dim,ul,resolu,zc,geoT,prj = \
+            \
+            plcloud(str(self.mtl_file), 
+                    cldprob=cloud_prob, 
+                    num_Lst=landsat_num)
+        print 'Done!'
+
+        print Cloud.min()
+        print Cloud.max()
+
+        import matplotlib.pyplot as plt
+        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
+        plt.show()
 
 
 # main for testing
