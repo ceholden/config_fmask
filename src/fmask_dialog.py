@@ -25,11 +25,13 @@ import os
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+import qgis.core
+
 from osgeo import gdal
 
 from ui_config_fmask import Ui_config_fmask
 
-from py_fmask import mtl2dict
+import py_fmask
 
 ###TODO
 from fmask_cloud_masking import plcloud
@@ -132,7 +134,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             return
 
         try:
-            self.mtl = mtl2dict(test_file)
+            self.mtl = py_fmask.mtl2dict(test_file)
         except:
             # TODO - QGIS message bar error
             print 'Error - cannot parse MTL file'
@@ -154,7 +156,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         test_file = str(self.edit_MTL.text())
 
         try:
-            self.mtl = mtl2dict(test_file)
+            self.mtl = py_fmask.mtl2dict(test_file)
         except:
             print 'Error - cannot parse MTL file'
             raise
@@ -303,10 +305,19 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         print Cloud.min()
         print Cloud.max()
+        
+        
+        temp_filename = py_fmask.temp_raster(Cloud, geoT, prj)
 
-        import matplotlib.pyplot as plt
-        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
-        plt.show()
+        rlayer = qgis.core.QgsRasterLayer(temp_filename, 'Cloud Probability')
+
+        qgis.core.QgsMapLayerRegistry.instance().addMapLayer(rlayer)
+
+#        import matplotlib.pyplot as plt
+#        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
+#        plt.show()
+        
+
 
 
 # main for testing
