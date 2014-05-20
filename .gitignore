@@ -1,4 +1,5 @@
 fmask_cloud_masking.py
+resources_rc.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
