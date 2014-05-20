@@ -52,6 +52,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         QtGui.QDialog.__init__(self)
 
+        # Setup defualt MTL file (for QLineEdit)
+        self.mtl_file = os.getcwd()
+
         # Setup GUI (required by Qt)
         self.setupUi(self)
 
@@ -68,8 +71,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     def setup_gui(self):
         ### Setup MTL input
-        # Init text as current directory
-        self.edit_MTL.setText(os.getcwd())
+        # Init text
+        self.edit_MTL.setText(self.mtl_file)
+        self.edit_MTL.returnPressed.connect(self.entered_MTL)
         self.button_MTL.clicked.connect(self.find_MTL)
 
         ### Setup output capacity
@@ -117,20 +121,44 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     @QtCore.pyqtSlot()
     def find_MTL(self):
         """ Open QFileDialog to find a MTL file """
-        # Save current path
-        current_path = str(self.edit_MTL.text())
         # Open QFileDialog
-        self.mtl_file = QtGui.QFileDialog.getOpenFileName(self,
+        test_file = str(QtGui.QFileDialog.getOpenFileName(self,
             'Locate MTL file',
-            os.path.dirname(current_path),
-            '*MTL.txt')
+            os.path.dirname(self.mtl_file),
+            '*MTL.txt'))
+
+        if test_file == '':
+            return
 
         try:
-            self.mtl = mtl2dict(filename)
+            self.mtl = mtl2dict(test_file)
         except:
             # TODO - QGIS message bar error
             print 'Error - cannot parse MTL file'
             raise
+    
+        self.mtl_file = str(test_file)
+    
+        # Update text
+        self.edit_MTL.setText(self.mtl_file)
+
+        self.update_table_MTL()
+
+    @QtCore.pyqtSlot()
+    def entered_MTL(self):
+        """ Try using MTL file from QLineEdit """
+        # Save current file
+        current_file = self.mtl_file
+        # Get entered MTL file
+        test_file = str(self.edit_MTL.text())
+
+        try:
+            self.mtl = mtl2dict(test_file)
+        except:
+            print 'Error - cannot parse MTL file'
+            raise
+        
+        self.mtl_file = str(test_file)
 
         self.update_table_MTL()
 
@@ -156,6 +184,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                 if button.isEnabled():
                     button.setEnabled(False)
                 self.enable_symbology[i] = False
+
 
     @QtCore.pyqtSlot(QtGui.QPushButton)
     def button_box_clicked(self, button):
@@ -205,6 +234,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Update label colors
         self.update_symbology_color(fmask)
 
+
     def update_symbology_color(self, fmask):
         """ Updates Fmask symbology QCheckBox label with appropriate color """
         # Retrieve color (r, g, b, a)
@@ -216,6 +246,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         # Update style sheet
         self.symbology_pairing[fmask][1].setStyleSheet(style)
+
 
     def update_table_MTL(self):
         """ Updates MTL metadata table with information from MTL file """
