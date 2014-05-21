@@ -67,7 +67,7 @@ class config_fmask:
 
     def show_fmask_dialog(self):
         """ Show dialog window """
-        self.dlg.exec_()
+        self.dlg.show()
 
     def unload(self):
         """ Shutdown by removing icons and disconnecting signals """
