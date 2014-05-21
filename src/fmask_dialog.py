@@ -46,8 +46,13 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         'snow'    :    (255, 66, 0, 255),
         'cloud'   :    (255, 0, 248, 255)
     }
-
     enable_symbology = [False, False, True, True, True]
+
+    cloud_prob = 22.5 # cloud_prob is scaled by 10 for slider
+    cloud_dilate = 3
+    shadow_dilate = 3
+    snow_dilate = 3
+
     mtl_file = ''
     mtl = {}
 
@@ -61,13 +66,23 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Setup GUI (required by Qt)
         self.setupUi(self)
 
-        # Create pairing of QCheckBox with QPushButton
+        # Create pairing of QCheckBox with QLabel and QPushButton
         self.symbology_pairing = {
-            'land'    :    (self.cbox_land,    self.button_sym_land),
-            'water'   :    (self.cbox_water,   self.button_sym_water),
-            'shadow'  :    (self.cbox_shadow,  self.button_sym_shadow),
-            'snow'    :    (self.cbox_snow,    self.button_sym_snow),
-            'cloud'   :    (self.cbox_cloud,   self.button_sym_cloud)
+            'land'   : (self.cbox_land,
+                        self.lab_land_color,
+                        self.button_sym_land),
+            'water'  : (self.cbox_water,
+                        self.lab_water_color,
+                        self.button_sym_water),
+            'shadow' : (self.cbox_shadow,
+                        self.lab_shadow_color,
+                        self.button_sym_shadow),
+            'snow'   : (self.cbox_snow,
+                        self.lab_snow_color,
+                        self.button_sym_snow),
+            'cloud'  : (self.cbox_cloud,
+                        self.lab_cloud_color,
+                        self.button_sym_cloud)
         }
 
         self.setup_gui()
@@ -85,10 +100,25 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Populate QComboBox with available drivers
         self.cbox_formats.addItems(self.drivers)
 
-        ### Configure cloud probability slider and label
-        self.lab_cloud_prob_val.setText("{0:.2f}%".format(
-            self.slider_cloud_prob.value() / 10.0))
+        ### Configure cloud probability slider, label and button
+        # Set to cloud_prob * 10 initially since it value comes from slider
+        #    which is scaled by 10
+        self.update_cloud_prob(self.cloud_prob * 10.0)
         self.slider_cloud_prob.valueChanged.connect(self.update_cloud_prob)
+
+        self.but_calc_plcloud.clicked.connect(partial(self.do_plcloud,
+            self.slider_cloud_prob.value() / 10.0))
+
+        ### Configure dilation parameters
+        self.spin_cloud_buffer.setValue(self.cloud_dilate)
+        self.spin_shadow_buffer.setValue(self.shadow_dilate)
+        self.spin_snow_buffer.setValue(self.snow_dilate)
+        self.spin_cloud_buffer.valueChanged.connect(
+            partial(self.update_dilation, variable='cloud_dilate'))
+        self.spin_shadow_buffer.valueChanged.connect(
+            partial(self.update_dilation, variable='shadow_dilate'))
+        self.spin_snow_buffer.valueChanged.connect(
+            partial(self.update_dilation, variable='snow_dilate'))
 
         ### Enable / disable color picking options
         self.symbology_on_off()
@@ -115,9 +145,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.button_sym_cloud.clicked.connect(
             partial(self.select_color, 'cloud'))
 
-        ### Override close event for saving of files
-        # Disconnect accept so "Save" doesn't close dialog
-        self.button_box.accepted.disconnect()
+        ### Override close event for saving of files #TODO delete, not necessary
         # Connect clicked signal to custom slot
         self.button_box.clicked.connect(self.button_box_clicked)
 
@@ -155,14 +183,24 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     def update_cloud_prob(self, value):
         """ Update slider's associated label with each value update """
         print 'Updated to value {v}'.format(v=value)
-        self.lab_cloud_prob_val.setText("{0:.2f}%".format(
-            self.slider_cloud_prob.value() / 10.0))
+        self.cloud_prob = value / 10.0
+
+        self.lab_cloud_prob_val.setText("{0:.2f}%".format(self.cloud_prob))
+        self.lab_cloud_prob_val.setAlignment(QtCore.Qt.AlignRight |
+                                             QtCore.Qt.AlignCenter)
+
+    @QtCore.pyqtSlot(int)
+    def update_dilation(self, value, variable):
+        """ Update dilation parameter when changed in spinbox """
+        print 'Changed {v} to {n}'.format(v=variable, n=value)
+        setattr(self, variable, value)
 
     @QtCore.pyqtSlot()
     def symbology_on_off(self):
         """ Updates on/off status of Fmask classes for symbology """
         # Loop through QCheckBox and QPushButton pairings
-        for i, (cbox, button) in enumerate(self.symbology_pairing.itervalues()):
+        for i, (cbox, label, button) in \
+                enumerate(self.symbology_pairing.itervalues()):
             # On state
             if cbox.isChecked():
                 if not button.isEnabled():
@@ -192,8 +230,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             print 'Accept'
         elif button_role == QtGui.QDialogButtonBox.ApplyRole:
             print "Apply"
-            plcloud = self.slider_cloud_prob.value() / 10.0
-            self.do_plcloud(plcloud)
         elif button_role == QtGui.QDialogButtonBox.HelpRole:
             print 'TODO - Help information'
         elif button_role == QtGui.QDialogButtonBox.ResetRole:
@@ -233,7 +269,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Create color string as rgb
         c_str = 'rgb({r}, {g}, {b})'.format(r=c[0], g=c[1], b=c[2])
         # Create style string
-        style = 'color: {c}'.format(c=c_str)
+        style = 'background-color: {c}'.format(c=c_str)
 
         # Update style sheet
         self.symbology_pairing[fmask][1].setStyleSheet(style)
@@ -284,15 +320,14 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             WT,Snow,Cloud,Shadow, \
             dim,ul,resolu,zc,geoT,prj = \
             \
-            plcloud(str(self.mtl_file), 
-                    cldprob=cloud_prob, 
+            plcloud(str(self.mtl_file),
+                    cldprob=cloud_prob,
                     num_Lst=landsat_num)
         print 'Done!'
 
         print Cloud.min()
         print Cloud.max()
-        
-        
+
         temp_filename = py_fmask.temp_raster(Cloud, geoT, prj)
 
         rlayer = qgis.core.QgsRasterLayer(temp_filename, 'Cloud Probability')
@@ -302,7 +337,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 #        import matplotlib.pyplot as plt
 #        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
 #        plt.show()
-        
+
 
 
 
