@@ -106,8 +106,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.update_cloud_prob(self.cloud_prob * 10.0)
         self.slider_cloud_prob.valueChanged.connect(self.update_cloud_prob)
 
-        self.but_calc_plcloud.clicked.connect(partial(self.do_plcloud,
-            self.slider_cloud_prob.value() / 10.0))
+        self.but_calc_plcloud.clicked.connect(self.do_plcloud))
 
         ### Configure dilation parameters
         self.spin_cloud_buffer.setValue(self.cloud_dilate)
@@ -309,7 +308,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 #            if _driver.GetMetadata().get('DCAP_CREATE') == 'YES':
 #                self.drivers.append(_driver.GetDescription())
 
-    def do_plcloud(self, cloud_prob):
+    def do_plcloud(self, cloud_prob=None):
+        if cloud_prob is None:
+            cloud_prob = self.cloud_prob
         # Find the Landsat spacecraft number
         landsat_num = int(self.mtl['SPACECRAFT_ID'][-1])
 
