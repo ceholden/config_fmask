@@ -61,7 +61,7 @@ def temp_raster(raster, geo_transform, projection):
     ds = driver.Create(filename, ncol, nrow, nband,
                      gdal_array.NumericTypeCodeToGDALTypeCode(
                      raster.dtype.type))
-    
+
     # Write file
     if nband == 1:
         ds.GetRasterBand(1).WriteArray(raster)
@@ -75,9 +75,12 @@ def temp_raster(raster, geo_transform, projection):
 
     return filename
 
-def apply_symbology(rlayer, symbology):
+def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):
     # See: QgsRasterRenderer* QgsSingleBandPseudoColorRendererWidget::renderer()
     # https://github.com/qgis/QGIS/blob/master/src/gui/raster/qgssinglebandpseudocolorrendererwidget.cpp
+    assert type(symbology) == dict, 'Symbology must be a dictionary'
+    assert type(symbology_enabled) == list, 'Symbology enabled must be a list'
+    assert type(transparent) == int, 'Transparency value must be an integer'
 
     # Get raster shader
     raster_shader = qgis.core.QgsRasterShader()
@@ -85,8 +88,11 @@ def apply_symbology(rlayer, symbology):
     color_ramp_shader = qgis.core.QgsColorRampShader()
     # Loop over Fmask values and add to color item list
     color_ramp_item_list = []
-    for name, value in zip(['land', 'water', 'shadow', 'snow', 'cloud'],
-                           [0, 1, 2, 3, 4]):
+    for name, value, enable in zip(['land', 'water', 'shadow', 'snow', 'cloud'],
+                               [0, 1, 2, 3, 4],
+                               symbology_enabled):
+        if enable is False:
+            continue
         color = symbology[name]
         # Color ramp item - color, label, value
         color_ramp_item = qgis.core.QgsColorRampShader.ColorRampItem(
@@ -108,5 +114,10 @@ def apply_symbology(rlayer, symbology):
         raster_shader)
     # Set renderer for raster layer
     rlayer.setRenderer(renderer)
+
+    # Set NoData transparency
+    rlayer.dataProvider().setUserNoDataValue(1,
+        qgis.core.QgsRasterRange(transparent, transparent))
+
     # Repaint
     rlayer.triggerRepaint()

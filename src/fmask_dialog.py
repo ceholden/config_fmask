@@ -335,7 +335,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         qgis.core.QgsMapLayerRegistry.instance().addMapLayer(self.plcloud_rlayer)
 
-        py_fmask.apply_symbology(self.plcloud_rlayer, self.symbology)
+        py_fmask.apply_symbology(self.plcloud_rlayer, self.symbology,
+            self.enable_symbology)
 
 #        import matplotlib.pyplot as plt
 #        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
