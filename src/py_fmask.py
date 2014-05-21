@@ -117,7 +117,9 @@ def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):
 
     # Set NoData transparency
     rlayer.dataProvider().setUserNoDataValue(1,
-        qgis.core.QgsRasterRange(transparent, transparent))
+        [qgis.core.QgsRasterRange(transparent, transparent)])
 
     # Repaint
+    if hasattr(rlayer, 'setCacheImage'):
+                rlayer.setCacheImage(None)
     rlayer.triggerRepaint()
