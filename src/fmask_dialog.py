@@ -76,8 +76,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         ### Setup MTL input
         # Init text
         self.edit_MTL.setText(self.mtl_file)
-        self.edit_MTL.returnPressed.connect(self.entered_MTL)
-        self.button_MTL.clicked.connect(self.find_MTL)
+        self.but_browse_mtl.clicked.connect(self.find_MTL)
+        self.but_load_mtl.clicked.connect(self.load_MTL)
 
         ### Setup output capacity
         # Find available GDAL drivers
@@ -125,44 +125,30 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     def find_MTL(self):
         """ Open QFileDialog to find a MTL file """
         # Open QFileDialog
-        test_file = str(QtGui.QFileDialog.getOpenFileName(self,
+        mtl = str(QtGui.QFileDialog.getOpenFileName(self,
             'Locate MTL file',
-            os.path.dirname(self.mtl_file),
+            self.mtl_file if os.path.isdir(self.mtl_file) \
+                else os.path.dirname(self.mtl_file),
             '*MTL.txt'))
 
-        if test_file == '':
-            return
+        self.edit_MTL.setText(mtl)
+
+    @QtCore.pyqtSlot()
+    def load_MTL(self):
+        """ Load MTL file currently specified in QLineEdit """
+        mtl = str(self.edit_MTL.text())
 
         try:
-            self.mtl = py_fmask.mtl2dict(test_file)
+            self.mtl = py_fmask.mtl2dict(mtl)
         except:
+            # Return text to old value
+            self.edit_MTL.setText(self.mtl_file)
             # TODO - QGIS message bar error
             print 'Error - cannot parse MTL file'
             raise
-    
-        self.mtl_file = str(test_file)
-    
-        # Update text
-        self.edit_MTL.setText(self.mtl_file)
 
-        self.update_table_MTL()
-
-    @QtCore.pyqtSlot()
-    def entered_MTL(self):
-        """ Try using MTL file from QLineEdit """
-        # Save current file
-        current_file = self.mtl_file
-        # Get entered MTL file
-        test_file = str(self.edit_MTL.text())
-
-        try:
-            self.mtl = py_fmask.mtl2dict(test_file)
-        except:
-            print 'Error - cannot parse MTL file'
-            raise
-        
-        self.mtl_file = str(test_file)
-
+        # If we load it okay, then accept the value and load table
+        self.mtl_file = mtl
         self.update_table_MTL()
 
     @QtCore.pyqtSlot(int)

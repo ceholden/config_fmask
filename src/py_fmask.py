@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import tempfile
 
 import numpy as np
@@ -8,6 +9,7 @@ from osgeo import gdal_array
 
 def mtl2dict(filename, to_float=True):
     """ Reads in filename and returns a dict with MTL metadata """
+    assert os.path.isfile(filename), '{f} is not a file'.format(f=filename)
 
     mtl = {}
 
