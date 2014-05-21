@@ -173,7 +173,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             self.edit_MTL.setText(self.mtl_file)
             # TODO - QGIS message bar error
             print 'Error - cannot parse MTL file'
-            raise
 
         # If we load it okay, then accept the value and load table
         self.mtl_file = mtl
