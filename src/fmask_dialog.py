@@ -328,17 +328,18 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         print Cloud.min()
         print Cloud.max()
 
-        temp_filename = py_fmask.temp_raster(Cloud, geoT, prj)
+        # TODO if PREVIEW RESULT: (else keep in memory)
+        self.plcloud_filename = py_fmask.temp_raster(Cloud * 4, geoT, prj)
+        self.plcloud_rlayer = qgis.core.QgsRasterLayer(self.plcloud_filename,
+                                          'Cloud Probability')
 
-        rlayer = qgis.core.QgsRasterLayer(temp_filename, 'Cloud Probability')
+        qgis.core.QgsMapLayerRegistry.instance().addMapLayer(self.plcloud_rlayer)
 
-        qgis.core.QgsMapLayerRegistry.instance().addMapLayer(rlayer)
+        py_fmask.apply_symbology(self.plcloud_rlayer, self.symbology)
 
 #        import matplotlib.pyplot as plt
 #        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
 #        plt.show()
-
-
 
 
 # main for testing
