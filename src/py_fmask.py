@@ -57,7 +57,7 @@ def temp_raster(raster, geo_transform, projection,
     'directory'         directory for temporary file (default: pwd)
 
     Returns:
-    filename of temporary raster image
+    (filename of temporary raster image, temporary file object)
     """
     # Setup directory - default to os.getcwd()
     if directory is None:
@@ -94,7 +94,7 @@ def temp_raster(raster, geo_transform, projection,
     ds.SetGeoTransform(geo_transform)
     ds.SetProjection(projection)
 
-    return filename
+    return (filename, _tempfile)
 
 
 def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):

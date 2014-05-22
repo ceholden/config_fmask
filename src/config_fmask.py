@@ -78,6 +78,9 @@ class config_fmask(object):
         # Disconnect signals
         self.show_dialog.triggered.disconnect()
 
+        # Tell dialog to unload resources
+        self.dlg.unload()
+
     # run method that performs all the real work
     def run(self):
         # show the dialog

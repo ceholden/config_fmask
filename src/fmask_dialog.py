@@ -29,10 +29,11 @@ from PyQt4 import QtGui
 
 import qgis.core
 
+from osgeo import gdal
+
 from ui_config_fmask import Ui_config_fmask
 
 import py_fmask
-
 # TODO
 from fmask_cloud_masking import plcloud
 
@@ -61,6 +62,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     mtl_file = ''
     mtl = {}
+
+    # Temporary result files
+    temp_files = []
 
     def __init__(self):
 
@@ -356,7 +360,11 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                     num_Lst=landsat_num)
 
         # TODO if PREVIEW RESULT button: (else keep in memory)
-        self.plcloud_filename = py_fmask.temp_raster(Cloud * 4, geoT, prj)
+        self.plcloud_filename, _tempfile = \
+            py_fmask.temp_raster(Cloud * 4, geoT, prj)
+        self.temp_files.append(_tempfile)
+
+        # Open as raster layer
         self.plcloud_rlayer = qgis.core.QgsRasterLayer(self.plcloud_filename,
                                                        'Cloud Probability')
         # Add to QGIS
@@ -381,6 +389,27 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         """ Save final result to disk """
         print('Saving of results not implemented yet...')
         pass
+
+    def unload(self):
+        """ Disconnect / unload """
+        print('Removing temporary files')
+
+        for _tmp in self.temp_files:
+            # Try deleting with GDAL
+            try:
+                ds = gdal.Open(_tmp.name, gdal.GA_Update)
+                driver = ds.GetDriver()
+                for f in ds.GetFileList():
+                    print('Removing file {f}'.format(f=f))
+                    driver.Delete(f)
+            except:
+                print('Could not delete files using GDAL')
+
+            # Try deleting using tempfile
+            try:
+                _tmp.close()
+            except:
+                pass
 
 
 # main for testing
