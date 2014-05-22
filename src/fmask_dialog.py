@@ -29,28 +29,32 @@ from PyQt4 import QtGui
 
 import qgis.core
 
-from osgeo import gdal
-
 from ui_config_fmask import Ui_config_fmask
 
 import py_fmask
 
-###TODO
+# TODO
 from fmask_cloud_masking import plcloud
 
 
 class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     symbology = {
-        'land'    :    (0, 255, 0, 255),
-        'water'   :    (0, 0, 255, 255),
-        'shadow'  :    (125, 125, 125, 255),
-        'snow'    :    (255, 66, 0, 255),
-        'cloud'   :    (255, 0, 248, 255)
+        'land':    (0, 255, 0, 255),
+        'water':    (0, 0, 255, 255),
+        'shadow':    (125, 125, 125, 255),
+        'snow':    (255, 66, 0, 255),
+        'cloud':    (255, 0, 248, 255)
     }
     enable_symbology = [False, False, True, True, True]
 
-    cloud_prob = 22.5 # cloud_prob is scaled by 10 for slider
+    # Button enablement switches
+    enable_calc_plcloud = False
+    enable_calc_match = False
+    enable_save = False
+
+    # Fmask parameters
+    cloud_prob = 22.5  # cloud_prob is scaled by 10 for slider
     cloud_dilate = 3
     shadow_dilate = 3
     snow_dilate = 3
@@ -70,47 +74,49 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         # Create pairing of QCheckBox with QLabel and QPushButton
         self.symbology_pairing = {
-            'land'   : (self.cbox_land,
-                        self.lab_land_color,
-                        self.button_sym_land),
-            'water'  : (self.cbox_water,
-                        self.lab_water_color,
-                        self.button_sym_water),
-            'shadow' : (self.cbox_shadow,
-                        self.lab_shadow_color,
-                        self.button_sym_shadow),
-            'snow'   : (self.cbox_snow,
-                        self.lab_snow_color,
-                        self.button_sym_snow),
-            'cloud'  : (self.cbox_cloud,
-                        self.lab_cloud_color,
-                        self.button_sym_cloud)
+            'land': (self.cbox_land,
+                     self.lab_land_color,
+                     self.button_sym_land),
+            'water': (self.cbox_water,
+                      self.lab_water_color,
+                      self.button_sym_water),
+            'shadow': (self.cbox_shadow,
+                       self.lab_shadow_color,
+                       self.button_sym_shadow),
+            'snow': (self.cbox_snow,
+                     self.lab_snow_color,
+                     self.button_sym_snow),
+            'cloud': (self.cbox_cloud,
+                      self.lab_cloud_color,
+                      self.button_sym_cloud)
         }
 
         self.setup_gui()
 
     def setup_gui(self):
-        ### Setup MTL input
+        # Setup MTL input
         # Init text
         self.edit_MTL.setText(self.mtl_file)
         self.but_browse_mtl.clicked.connect(self.find_MTL)
         self.but_load_mtl.clicked.connect(self.load_MTL)
 
-        ### Setup output capacity
+        # Setup output capacity
         # Find available GDAL drivers
         self.get_available_drivers()
         # Populate QComboBox with available drivers
         self.cbox_formats.addItems(self.drivers)
 
-        ### Configure cloud probability slider, label and button
+        # Configure cloud probability slider, label and button
         # Set to cloud_prob * 10 initially since it value comes from slider
         #    which is scaled by 10
         self.update_cloud_prob(self.cloud_prob * 10.0)
         self.slider_cloud_prob.valueChanged.connect(self.update_cloud_prob)
 
+        # Setup "Calculate Cloud Probability" button - disabled until we load
+        # MTL
         self.but_calc_plcloud.clicked.connect(self.do_plcloud)
 
-        ### Configure dilation parameters
+        # Configure dilation parameters
         self.spin_cloud_buffer.setValue(self.cloud_dilate)
         self.spin_shadow_buffer.setValue(self.shadow_dilate)
         self.spin_snow_buffer.setValue(self.snow_dilate)
@@ -121,7 +127,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.spin_snow_buffer.valueChanged.connect(
             partial(self.update_dilation, variable='snow_dilate'))
 
-        ### Enable / disable color picking options
+        # Enable / disable color picking options
         self.symbology_on_off()
         # Add signals
         self.cbox_land.stateChanged.connect(self.symbology_on_off)
@@ -130,11 +136,11 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.cbox_snow.stateChanged.connect(self.symbology_on_off)
         self.cbox_cloud.stateChanged.connect(self.symbology_on_off)
 
-        ### Set colors
+        # Set colors
         for fmask in self.symbology.keys():
             self.update_symbology_color(fmask)
 
-        ### Connect signals for mask color symbology
+        # Connect signals for mask color symbology
         self.button_sym_land.clicked.connect(
             partial(self.select_color, 'land'))
         self.button_sym_water.clicked.connect(
@@ -146,7 +152,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.button_sym_cloud.clicked.connect(
             partial(self.select_color, 'cloud'))
 
-        ### Override close event for saving of files #TODO delete, not necessary
+        # Override close event for saving of files #TODO delete, not necessary
         # Connect clicked signal to custom slot
         self.button_box.clicked.connect(self.button_box_clicked)
 
@@ -154,11 +160,12 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     def find_MTL(self):
         """ Open QFileDialog to find a MTL file """
         # Open QFileDialog
-        mtl = str(QtGui.QFileDialog.getOpenFileName(self,
-            'Locate MTL file',
-            self.mtl_file if os.path.isdir(self.mtl_file) \
-                else os.path.dirname(self.mtl_file),
-            '*MTL.txt'))
+        mtl = str(QtGui.QFileDialog.
+                  getOpenFileName(self,
+                                  'Locate MTL file',
+                                  self.mtl_file if os.path.isdir(self.mtl_file)
+                                  else os.path.dirname(self.mtl_file),
+                                  '*MTL.txt'))
 
         self.edit_MTL.setText(mtl)
 
@@ -212,7 +219,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                     button.setEnabled(False)
                 self.enable_symbology[i] = False
 
-
     @QtCore.pyqtSlot(QtGui.QPushButton)
     def button_box_clicked(self, button):
         """ Override for QDialogButttonBox slots
@@ -246,8 +252,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         # Get selected color
         new_c = color_dialog.getColor(current_c, self,
-            'Pick color for {f}'.format(f=fmask),
-            QtGui.QColorDialog.ShowAlphaChannel)
+                                      'Pick color for {f}'.format(f=fmask),
+                                      QtGui.QColorDialog.ShowAlphaChannel)
 
         # Update symbology colors
         self.symbology[fmask] = (
@@ -260,7 +266,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Update label colors
         self.update_symbology_color(fmask)
 
-
     def update_symbology_color(self, fmask):
         """ Updates Fmask symbology QCheckBox label with appropriate color """
         # Retrieve color (r, g, b, a)
@@ -272,7 +277,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         # Update style sheet
         self.symbology_pairing[fmask][1].setStyleSheet(style)
-
 
     def update_table_MTL(self):
         """ Updates MTL metadata table with information from MTL file """
@@ -297,13 +301,12 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             self.table_MTL.setItem(row, 0, _key)
             self.table_MTL.setItem(row, 1, _value)
 
-
     def get_available_drivers(self):
         """ Creates list of GDAL's available drivers with creation capacity """
         self.drivers = ['GTiff', 'ENVI']
 
-### DCAP_CREATE doesn't tell us if we can actually write data to the format
-###    (e.g., VRT comes back as writeable)
+# DCAP_CREATE doesn't tell us if we can actually write data to the format
+# (e.g., VRT comes back as writeable)
 #        for i in xrange(gdal.GetDriverCount()):
 #            _driver = gdal.GetDriver(i)
 #            if _driver.GetMetadata().get('DCAP_CREATE') == 'YES':
@@ -316,10 +319,11 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Find the Landsat spacecraft number
         landsat_num = int(self.mtl['SPACECRAFT_ID'][-1])
 
-        print('Running plcloud with cloud probability {p}'.format(p=cloud_prob))
-        zen,azi,ptm,Temp,t_templ,t_temph, \
-            WT,Snow,Cloud,Shadow, \
-            dim,ul,resolu,zc,geoT,prj = \
+        print('Running plcloud with cloud probability {p}'.
+              format(p=cloud_prob))
+        zen, azi, ptm, Temp, t_templ, t_temph, \
+            WT, Snow, Cloud, Shadow, \
+            dim, ul, resolu, zc, geoT, prj = \
             \
             plcloud(str(self.mtl_file),
                     cldprob=cloud_prob,
@@ -328,12 +332,13 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # TODO if PREVIEW RESULT: (else keep in memory)
         self.plcloud_filename = py_fmask.temp_raster(Cloud * 4, geoT, prj)
         self.plcloud_rlayer = qgis.core.QgsRasterLayer(self.plcloud_filename,
-                                          'Cloud Probability')
+                                                       'Cloud Probability')
 
-        qgis.core.QgsMapLayerRegistry.instance().addMapLayer(self.plcloud_rlayer)
+        qgis.core.QgsMapLayerRegistry.instance().addMapLayer(
+            self.plcloud_rlayer)
 
         py_fmask.apply_symbology(self.plcloud_rlayer, self.symbology,
-            self.enable_symbology)
+                                 self.enable_symbology)
 
 #        import matplotlib.pyplot as plt
 #        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
