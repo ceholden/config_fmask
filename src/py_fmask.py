@@ -3,7 +3,6 @@
 import os
 import tempfile
 
-from PyQt4 import QtCore
 from PyQt4 import QtGui
 import qgis.core
 
@@ -12,6 +11,7 @@ from osgeo import gdal
 from osgeo import gdal_array
 
 gdal.UseExceptions()
+
 
 def mtl2dict(filename, to_float=True):
     """ Reads in filename and returns a dict with MTL metadata """
@@ -45,9 +45,10 @@ def mtl2dict(filename, to_float=True):
 
     return mtl
 
+
 def temp_raster(raster, geo_transform, projection,
-        prefix='pyfmask_', directory=None):
-    """ Creates a temporary file raster dataset (GTiff) 
+                prefix='pyfmask_', directory=None):
+    """ Creates a temporary file raster dataset (GTiff)
     Arguments:
     'raster'            numpy.ndarray image
     'geo_transform'     tuple of raster geotransform
@@ -63,9 +64,9 @@ def temp_raster(raster, geo_transform, projection,
         directory = os.getcwd()
     # Create temporary file that Python will delete on exit
     #   seems a little wonk to write over it with GDAL?
-    #   but it will ensure it deletes the file... 
+    #   but it will ensure it deletes the file...
     _tempfile = tempfile.NamedTemporaryFile(suffix='.gtif', prefix=prefix,
-        delete=True, dir=directory)
+                                            delete=True, dir=directory)
     filename = _tempfile.name
 
     # Parameterize raster
@@ -79,8 +80,8 @@ def temp_raster(raster, geo_transform, projection,
     driver = gdal.GetDriverByName('GTiff')
     # Create dataset
     ds = driver.Create(filename, ncol, nrow, nband,
-                     gdal_array.NumericTypeCodeToGDALTypeCode(
-                     raster.dtype.type))
+                       gdal_array.NumericTypeCodeToGDALTypeCode(
+                           raster.dtype.type))
 
     # Write file
     if nband == 1:
@@ -95,13 +96,10 @@ def temp_raster(raster, geo_transform, projection,
 
     return filename
 
+
 def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):
     # See: QgsRasterRenderer* QgsSingleBandPseudoColorRendererWidget::renderer()
     # https://github.com/qgis/QGIS/blob/master/src/gui/raster/qgssinglebandpseudocolorrendererwidget.cpp
-    assert type(symbology) == dict, 'Symbology must be a dictionary'
-    assert type(symbology_enabled) == list, 'Symbology enabled must be a list'
-    assert type(transparent) == int, 'Transparency value must be an integer'
-
     # Get raster shader
     raster_shader = qgis.core.QgsRasterShader()
     # Color ramp shader
@@ -109,8 +107,8 @@ def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):
     # Loop over Fmask values and add to color item list
     color_ramp_item_list = []
     for name, value, enable in zip(['land', 'water', 'shadow', 'snow', 'cloud'],
-                               [0, 1, 2, 3, 4],
-                               symbology_enabled):
+                                   [0, 1, 2, 3, 4],
+                                   symbology_enabled):
         if enable is False:
             continue
         color = symbology[name]
@@ -136,10 +134,10 @@ def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):
     rlayer.setRenderer(renderer)
 
     # Set NoData transparency
-    rlayer.dataProvider().setUserNoDataValue(1,
-        [qgis.core.QgsRasterRange(transparent, transparent)])
+    nodata = [qgis.core.QgsRasterRange(transparent, transparent)]
+    rlayer.dataProvider().setUserNoDataValue(1, nodata)
 
     # Repaint
     if hasattr(rlayer, 'setCacheImage'):
-                rlayer.setCacheImage(None)
+        rlayer.setCacheImage(None)
     rlayer.triggerRepaint()
