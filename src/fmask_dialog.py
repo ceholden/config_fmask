@@ -105,6 +105,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.get_available_drivers()
         # Populate QComboBox with available drivers
         self.cbox_formats.addItems(self.drivers)
+        # Save button
+        self.but_save.clicked.connect(self.save_result)
 
         # Configure cloud probability slider, label and button
         # Set to cloud_prob * 10 initially since it value comes from slider
@@ -112,8 +114,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.update_cloud_prob(self.cloud_prob * 10.0)
         self.slider_cloud_prob.valueChanged.connect(self.update_cloud_prob)
 
-        # Setup "Calculate Cloud Probability" button - disabled until we load
-        # MTL
+        # Setup "Calculate Cloud Probability" button
         self.but_calc_plcloud.clicked.connect(self.do_plcloud)
 
         # Configure dilation parameters
@@ -126,6 +127,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             partial(self.update_dilation, variable='shadow_dilate'))
         self.spin_snow_buffer.valueChanged.connect(
             partial(self.update_dilation, variable='snow_dilate'))
+
+        # Setup cloud matching button
+        self.but_calc_match.clicked.connect(self.do_cloud_matching)
 
         # Enable / disable color picking options
         self.symbology_on_off()
@@ -156,6 +160,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Connect clicked signal to custom slot
         self.button_box.clicked.connect(self.button_box_clicked)
 
+        # Disable all calculations initially
+        self.allow_results(plcloud=False, match=False, save=False)
+
     @QtCore.pyqtSlot()
     def find_MTL(self):
         """ Open QFileDialog to find a MTL file """
@@ -185,22 +192,27 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # If we load it okay, then accept the value and load table
         self.mtl_file = mtl
         self.update_table_MTL()
+        self.allow_results(plcloud=True)
 
     @QtCore.pyqtSlot(int)
     def update_cloud_prob(self, value):
         """ Update slider's associated label with each value update """
         self.cloud_prob = value / 10.0
-        print('Updated to value {v}'.format(v=self.cloud_prob))
 
+        print('Updated to value {v}'.format(v=self.cloud_prob))
         self.lab_cloud_prob_val.setText("{0:.2f}%".format(self.cloud_prob))
         self.lab_cloud_prob_val.setAlignment(QtCore.Qt.AlignRight |
                                              QtCore.Qt.AlignCenter)
+
+        self.allow_results()
 
     @QtCore.pyqtSlot(int)
     def update_dilation(self, value, variable):
         """ Update dilation parameter when changed in spinbox """
         print('Changed {v} to {n}'.format(v=variable, n=value))
         setattr(self, variable, value)
+
+        self.allow_results(plcloud=True)
 
     @QtCore.pyqtSlot()
     def symbology_on_off(self):
@@ -305,6 +317,19 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         """ Creates list of GDAL's available drivers with creation capacity """
         self.drivers = ['GTiff', 'ENVI']
 
+    def allow_results(self, plcloud=None, match=None, save=None):
+        """ Disable calculation buttons """
+        if plcloud is not None:
+            self.enable_calc_plcloud = plcloud
+        if match is not None:
+            self.enable_calc_match = match
+        if save is not None:
+            self.enable_save = save
+
+        self.but_calc_plcloud.setEnabled(self.enable_calc_plcloud)
+        self.but_calc_match.setEnabled(self.enable_calc_match)
+        self.but_save.setEnabled(self.enable_save)
+
 # DCAP_CREATE doesn't tell us if we can actually write data to the format
 # (e.g., VRT comes back as writeable)
 #        for i in xrange(gdal.GetDriverCount()):
@@ -321,6 +346,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         print('Running plcloud with cloud probability {p}'.
               format(p=cloud_prob))
+
         zen, azi, ptm, Temp, t_templ, t_temph, \
             WT, Snow, Cloud, Shadow, \
             dim, ul, resolu, zc, geoT, prj = \
@@ -329,20 +355,32 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                     cldprob=cloud_prob,
                     num_Lst=landsat_num)
 
-        # TODO if PREVIEW RESULT: (else keep in memory)
+        # TODO if PREVIEW RESULT button: (else keep in memory)
         self.plcloud_filename = py_fmask.temp_raster(Cloud * 4, geoT, prj)
         self.plcloud_rlayer = qgis.core.QgsRasterLayer(self.plcloud_filename,
                                                        'Cloud Probability')
-
+        # Add to QGIS
         qgis.core.QgsMapLayerRegistry.instance().addMapLayer(
             self.plcloud_rlayer)
 
+        # Set symbology for new raster layer
         py_fmask.apply_symbology(self.plcloud_rlayer, self.symbology,
                                  self.enable_symbology)
 
-#        import matplotlib.pyplot as plt
-#        plt.imshow(Cloud, cmap=plt.cm.gray, vmin=0, vmax=1)
-#        plt.show()
+        # Enable matching button
+        self.allow_results(match=True)
+
+    @QtCore.pyqtSlot()
+    def do_cloud_matching(self):
+        """ Perform cloud/shadow matching and finalize mask """
+        print('Cloud matching not implemented yet...')
+        pass
+
+    @QtCore.pyqtSlot()
+    def save_result(self):
+        """ Save final result to disk """
+        print('Saving of results not implemented yet...')
+        pass
 
 
 # main for testing
