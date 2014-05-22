@@ -33,7 +33,8 @@ import resources_rc
 # Import the code for the dialog
 from fmask_dialog import FmaskDialog
 
-class config_fmask:
+
+class config_fmask(object):
 
     def __init__(self, iface):
         # Save reference to the QGIS interface
@@ -43,7 +44,7 @@ class config_fmask:
         # initialize locale
         locale = QtCore.QSettings().value("locale/userLocale")[0:2]
         localePath = os.path.join(self.plugin_dir, 'i18n',
-            'config_fmask_{}.qm'.format(locale))
+                                  'config_fmask_{}.qm'.format(locale))
 
         if os.path.exists(localePath):
             self.translator = QtCore.QTranslator()
@@ -59,7 +60,7 @@ class config_fmask:
         """ Create toolbar item for plugin """
         # Dialog button
         self.show_dialog = QtGui.QAction(QtGui.QIcon(
-            ':/plugins/config_fmask/icon.png'), 
+            ':/plugins/config_fmask/icon.png'),
             'Test Fmask Parameters',
             self.iface.mainWindow())
         self.show_dialog.triggered.connect(self.show_fmask_dialog)
