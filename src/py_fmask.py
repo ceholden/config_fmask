@@ -45,10 +45,28 @@ def mtl2dict(filename, to_float=True):
 
     return mtl
 
-def temp_raster(raster, geo_transform, projection):
-    """ Creates a temporary file raster dataset (GTiff) """
-    # Get temporary filename
-    filename = tempfile.mktemp('.gtif')
+def temp_raster(raster, geo_transform, projection,
+        prefix='pyfmask_', directory=None):
+    """ Creates a temporary file raster dataset (GTiff) 
+    Arguments:
+    'raster'            numpy.ndarray image
+    'geo_transform'     tuple of raster geotransform
+    'projection'        str of raster's projection
+    'prefix'            prefix of temporary filename
+    'directory'         directory for temporary file (default: pwd)
+
+    Returns:
+    filename of temporary raster image
+    """
+    # Setup directory - default to os.getcwd()
+    if directory is None:
+        directory = os.getcwd()
+    # Create temporary file that Python will delete on exit
+    #   seems a little wonk to write over it with GDAL?
+    #   but it will ensure it deletes the file... 
+    _tempfile = tempfile.NamedTemporaryFile(suffix='.gtif', prefix=prefix,
+        delete=True, dir=directory)
+    filename = _tempfile.name
 
     # Parameterize raster
     if raster.ndim == 2:
