@@ -19,6 +19,8 @@
  *                                                                         *
  ***************************************************************************/
 """
+from __future__ import division
+from __future__ import print_function
 from functools import partial
 import os
 
@@ -106,7 +108,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.update_cloud_prob(self.cloud_prob * 10.0)
         self.slider_cloud_prob.valueChanged.connect(self.update_cloud_prob)
 
-        self.but_calc_plcloud.clicked.connect(self.do_plcloud))
+        self.but_calc_plcloud.clicked.connect(self.do_plcloud)
 
         ### Configure dilation parameters
         self.spin_cloud_buffer.setValue(self.cloud_dilate)
@@ -171,7 +173,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             # Return text to old value
             self.edit_MTL.setText(self.mtl_file)
             # TODO - QGIS message bar error
-            print 'Error - cannot parse MTL file'
+            print('Error - cannot parse MTL file')
 
         # If we load it okay, then accept the value and load table
         self.mtl_file = mtl
@@ -180,8 +182,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     @QtCore.pyqtSlot(int)
     def update_cloud_prob(self, value):
         """ Update slider's associated label with each value update """
-        print 'Updated to value {v}'.format(v=value)
         self.cloud_prob = value / 10.0
+        print('Updated to value {v}'.format(v=self.cloud_prob))
 
         self.lab_cloud_prob_val.setText("{0:.2f}%".format(self.cloud_prob))
         self.lab_cloud_prob_val.setAlignment(QtCore.Qt.AlignRight |
@@ -190,7 +192,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     @QtCore.pyqtSlot(int)
     def update_dilation(self, value, variable):
         """ Update dilation parameter when changed in spinbox """
-        print 'Changed {v} to {n}'.format(v=variable, n=value)
+        print('Changed {v} to {n}'.format(v=variable, n=value))
         setattr(self, variable, value)
 
     @QtCore.pyqtSlot()
@@ -222,16 +224,15 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             ResetRole        "Restore Defaults" button
         """
         button_role = self.button_box.buttonRole(button)
-        print button_role
 
         if button_role == QtGui.QDialogButtonBox.AcceptRole:
-            print 'Accept'
+            print('Accept')
         elif button_role == QtGui.QDialogButtonBox.ApplyRole:
-            print "Apply"
+            print("Apply")
         elif button_role == QtGui.QDialogButtonBox.HelpRole:
-            print 'TODO - Help information'
+            print('TODO - Help information')
         elif button_role == QtGui.QDialogButtonBox.ResetRole:
-            print 'TODO - Reset to defaults'
+            print('TODO - Reset to defaults')
 
     @QtCore.pyqtSlot(str)
     def select_color(self, fmask):
@@ -308,14 +309,14 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 #            if _driver.GetMetadata().get('DCAP_CREATE') == 'YES':
 #                self.drivers.append(_driver.GetDescription())
 
+    @QtCore.pyqtSlot()
     def do_plcloud(self, cloud_prob=None):
         if cloud_prob is None:
             cloud_prob = self.cloud_prob
         # Find the Landsat spacecraft number
         landsat_num = int(self.mtl['SPACECRAFT_ID'][-1])
 
-        print cloud_prob
-        print landsat_num
+        print('Running plcloud with cloud probability {p}'.format(p=cloud_prob))
         zen,azi,ptm,Temp,t_templ,t_temph, \
             WT,Snow,Cloud,Shadow, \
             dim,ul,resolu,zc,geoT,prj = \
@@ -323,10 +324,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             plcloud(str(self.mtl_file),
                     cldprob=cloud_prob,
                     num_Lst=landsat_num)
-        print 'Done!'
-
-        print Cloud.min()
-        print Cloud.max()
 
         # TODO if PREVIEW RESULT: (else keep in memory)
         self.plcloud_filename = py_fmask.temp_raster(Cloud * 4, geoT, prj)
