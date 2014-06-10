@@ -66,9 +66,12 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     # Temporary result files
     temp_files = []
 
-    def __init__(self):
+    def __init__(self, iface):
 
         QtGui.QDialog.__init__(self)
+
+        # Store reference to QGIS interface for refresh of symbology
+        self.iface = iface
 
         # Setup defualt MTL file (for QLineEdit)
         self.mtl_file = os.getcwd()
@@ -375,6 +378,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Set symbology for new raster layer
         py_fmask.apply_symbology(self.plcloud_rlayer, self.symbology,
                                  self.enable_symbology)
+
+        # Refresh layer symbology
+        self.iface.legendInterface().refreshLayerSymbology(self.plcloud_rlayer)
 
         # Enable matching button
         self.allow_results(match=True)
