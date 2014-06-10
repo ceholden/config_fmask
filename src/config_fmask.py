@@ -54,7 +54,7 @@ class config_fmask(object):
                 QtCore.QCoreApplication.installTranslator(self.translator)
 
         # Create the dialog (after translation) and keep reference
-        self.dlg = FmaskDialog()
+        self.dlg = FmaskDialog(self.iface)
 
     def initGui(self):
         """ Create toolbar item for plugin """
