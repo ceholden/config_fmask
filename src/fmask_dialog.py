@@ -365,8 +365,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.temp_files.append(_tempfile)
 
         # Open as raster layer
+        rlayer_name = 'Cloud probability {p}'.format(p=cloud_prob)
         self.plcloud_rlayer = qgis.core.QgsRasterLayer(self.plcloud_filename,
-                                                       'Cloud Probability')
+                                                       rlayer_name)
         # Add to QGIS
         qgis.core.QgsMapLayerRegistry.instance().addMapLayer(
             self.plcloud_rlayer)
