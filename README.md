@@ -15,6 +15,15 @@ Here is an example which displays two different cloud probability masks using th
 
 ![Example](https://raw.githubusercontent.com/ceholden/config_fmask/master/media/example/config_fmask_example.png)
 
+## TODO
+- Interrupt the plcloud function right before the cloud probability parameter is used in calculations to facilitate future "warm starts" to calculating the probability mask
+- Connect cloud probability mask image to cloud object matching code
+- Export options
+- Check to ensure Landsat images referenced in MTL file exist (e.g., show error in QgsMessageBar if they need to be extracted)
+- Move print messages and other information to QgsMessageBar
+- Many miscellaneous usability / UI tweaks
+- Documentation
+
 ## Install requirements - #TODO
 
 - QGIS 2.0.1 or above
