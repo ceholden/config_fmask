@@ -380,7 +380,7 @@ def lndhdrread(filename):
             ul=(ulx,uly)
             # Read in date of year
             char_doy=data['LANDSAT_SCENE_ID']
-            doy=int(char_doy[15:17]) # This may need to change to 14:16. TODO Test this!
+            doy=int(char_doy[14:16]) # This may need to change to 14:16. TODO Test this!
 
     elif (Lnum == 8):
             # Retrieve LS8 info
@@ -844,7 +844,7 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None, log_filename="FMA
 
     ################################################## Snow test
     # It takes every snow pixels including snow pixel under thin clouds or icy clouds
-    Snow[numexpr.evaluate("(NDSI > 0.15) & (Temp < 1000) & (data4 > 1100) & (data2 > 1000)")] = 1 
+    Snow[numexpr.evaluate("(NDSI > 0.15) & (Temp < 1000) & (data4 > 1100) & (data2 > 1000)")] = 1
     #Snow[mask == 0] = 255
     ################################################## Water test
     # Zhe's water test (works over thin cloud)
@@ -1014,7 +1014,7 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None, log_filename="FMA
             nir[mask == 0] = backg_B4
             # fill in regional minimum Band 4 ref
             nir = imfill_skimage(nir)
-            nir = nir - data4 
+            nir = nir - data4
 
             # band 5 flood fill
             swir = data5
