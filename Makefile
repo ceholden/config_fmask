@@ -34,7 +34,7 @@ TRANSLATIONS =
 
 PLUGINNAME = config_fmask
 
-PY_FILES = src/*.py
+PY_FILES = src/*.py src/external/*.py
 
 EXTRAS = icon.png metadata.txt
 
