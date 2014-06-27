@@ -21,7 +21,9 @@
 """
 from __future__ import division
 from __future__ import print_function
+
 from functools import partial
+import logging
 import os
 
 from PyQt4 import QtCore
@@ -33,10 +35,13 @@ from osgeo import gdal
 
 from ui_config_fmask import Ui_config_fmask
 
-import py_fmask
-# TODO
-from fmask_cloud_masking import plcloud
+import pyfmask_utils
+from fmask_cloud_masking_edit import plcloud
 
+logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
+                            level=logging.DEBUG,
+                            datefmt='%H:%M:%S')
+logger = logging.getLogger(__name__)
 
 class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
@@ -189,12 +194,13 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         mtl = str(self.edit_MTL.text())
 
         try:
-            self.mtl = py_fmask.mtl2dict(mtl)
+            self.mtl = pyfmask_utils.mtl2dict(mtl)
         except:
             # Return text to old value
             self.edit_MTL.setText(self.mtl_file)
             # TODO - QGIS message bar error
-            print('Error - cannot parse MTL file')
+            logger.error('Error - cannot parse MTL file')
+            raise
 
         # If we load it okay, then accept the value and load table
         self.mtl_file = mtl
@@ -206,7 +212,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         """ Update slider's associated label with each value update """
         self.cloud_prob = value / 10.0
 
-        print('Updated to value {v}'.format(v=self.cloud_prob))
+        logger.info('Updated to value {v}'.format(v=self.cloud_prob))
         self.lab_cloud_prob_val.setText("{0:.2f}%".format(self.cloud_prob))
         self.lab_cloud_prob_val.setAlignment(QtCore.Qt.AlignRight |
                                              QtCore.Qt.AlignCenter)
@@ -216,7 +222,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     @QtCore.pyqtSlot(int)
     def update_dilation(self, value, variable):
         """ Update dilation parameter when changed in spinbox """
-        print('Changed {v} to {n}'.format(v=variable, n=value))
+        logger.info('Changed {v} to {n}'.format(v=variable, n=value))
         setattr(self, variable, value)
 
         self.allow_results(plcloud=True)
@@ -322,6 +328,12 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     def get_available_drivers(self):
         """ Creates list of GDAL's available drivers with creation capacity """
+# DCAP_CREATE doesn't tell us if we can actually write data to the format
+# (e.g., VRT comes back as writeable)
+#        for i in xrange(gdal.GetDriverCount()):
+#            _driver = gdal.GetDriver(i)
+#            if _driver.GetMetadata().get('DCAP_CREATE') == 'YES':
+#                self.drivers.append(_driver.GetDescription())
         self.drivers = ['GTiff', 'ENVI']
 
     def allow_results(self, plcloud=None, match=None, save=None):
@@ -336,13 +348,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.but_calc_plcloud.setEnabled(self.enable_calc_plcloud)
         self.but_calc_match.setEnabled(self.enable_calc_match)
         self.but_save.setEnabled(self.enable_save)
-
-# DCAP_CREATE doesn't tell us if we can actually write data to the format
-# (e.g., VRT comes back as writeable)
-#        for i in xrange(gdal.GetDriverCount()):
-#            _driver = gdal.GetDriver(i)
-#            if _driver.GetMetadata().get('DCAP_CREATE') == 'YES':
-#                self.drivers.append(_driver.GetDescription())
 
     @QtCore.pyqtSlot()
     def do_plcloud(self, cloud_prob=None):
@@ -364,7 +369,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         # TODO if PREVIEW RESULT button: (else keep in memory)
         self.plcloud_filename, _tempfile = \
-            py_fmask.temp_raster(Cloud * 4, geoT, prj)
+            pyfmask_utils.temp_raster(Cloud * 4, geoT, prj)
         self.temp_files.append(_tempfile)
 
         # Open as raster layer
@@ -376,8 +381,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
             self.plcloud_rlayer)
 
         # Set symbology for new raster layer
-        py_fmask.apply_symbology(self.plcloud_rlayer, self.symbology,
-                                 self.enable_symbology)
+        pyfmask_utils.apply_symbology(self.plcloud_rlayer,
+                                      self.symbology,
+                                      self.enable_symbology)
 
         # Refresh layer symbology
         self.iface.legendInterface().refreshLayerSymbology(self.plcloud_rlayer)
@@ -407,10 +413,10 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                 ds = gdal.Open(_tmp.name, gdal.GA_Update)
                 driver = ds.GetDriver()
                 for f in ds.GetFileList():
-                    print('Removing file {f}'.format(f=f))
+                    logger.info('Removing file {f}'.format(f=f))
                     driver.Delete(f)
             except:
-                print('Could not delete files using GDAL')
+                logger.warning('Could not delete {f} using GDAL'.format(f=f))
 
             # Try deleting using tempfile
             try:

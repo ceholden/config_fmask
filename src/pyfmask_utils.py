@@ -13,6 +13,12 @@ from osgeo import gdal_array
 gdal.UseExceptions()
 
 
+class FmaskResult(object):
+    """ Object for running and storing some results from Fmask """
+    def __init__(self):
+        pass
+
+
 def mtl2dict(filename, to_float=True):
     """ Reads in filename and returns a dict with MTL metadata """
     assert os.path.isfile(filename), '{f} is not a file'.format(f=filename)
