@@ -19,9 +19,12 @@ import scipy.stats
 import scipy.signal
 import scipy.ndimage.morphology
 from osgeo import gdal
+import skimage
 from skimage import morphology
 from skimage import measure
 from skimage import segmentation
+
+skimage_version = [int(n) for n in skimage.__version__.split('.') if n != '']
 
 logger = logging.getLogger('root.' + __name__)
 
@@ -1262,12 +1265,18 @@ def fcssm(Sun_zen,Sun_azi,ptm,Temp,t_templ,t_temph,Water,Snow,plcim,plsim,ijDim,
 
         # filter out cloud object < than num_cldoj pixels
         morphology.remove_small_objects(segm_cloud_init, num_cldoj, in_place=True)
-        segm_cloud, fw, inv = segmentation.relabel_from_one(segm_cloud_init)
+        if skimage_version[1] >= 10:
+            segm_cloud, fw, inv = segmentation.relabel_sequential(segm_cloud_init)
+        else:
+            segm_cloud, fw, inv = segmentation.relabel_from_one(segm_cloud_init)
         num = numpy.max(segm_cloud)
 
         # NOTE: properties is deprecated as of version 0.9 and all properties are computed. Currently using version 0.8.2. If this version or a later versionproves too slow, I'll implement another method. JS 16/12/2013
         # The properties is taking approx 3min, I can cut that down to just a few seconds using another method, but will leave for the time being.
-        s = measure.regionprops(segm_cloud,  properties=['Area', 'Coordinates'])
+        if skimage_version[1] > 9:
+            s = measure.regionprops(segm_cloud)
+        else:
+            s = measure.regionprops(segm_cloud,  properties=['Area', 'Coordinates'])
 
         # Use iteration to get the optimal move distance
         # Calulate the moving cloud shadow
