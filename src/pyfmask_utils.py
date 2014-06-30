@@ -23,7 +23,7 @@ class FmaskResult(object):
     def __init__(self, mtl, cache_toa_bt=False):
         # MTL filename
         self.mtl = mtl
-        
+
         # Should TOA and BT data be cached?
         self._cache_toa_bt = cache_toa_bt
         # If so, have we cached it?
@@ -55,8 +55,8 @@ class FmaskResult(object):
         # Load TOA and BT information if needed
         if not self._cached_toa_bt:
 #            (self.Temp, self.data,
-#                self.dim, self.ul, self.zen, self.azi, self.zc, 
-#                self.satu_B1, self.satu_B2, self.satu_B3, 
+#                self.dim, self.ul, self.zen, self.azi, self.zc,
+#                self.satu_B1, self.satu_B2, self.satu_B3,
 #                self.resolu, self.geoT, self.prj) = nd2toarbt(self.mtl)
             # Just save results as list since we only just pass it
             self.toa_bt = nd2toarbt(self.mtl)
@@ -71,7 +71,7 @@ class FmaskResult(object):
 #                WT,Snow,Cloud,Shadow,
 #                dim,ul,resolu,zc,geoT,prj) = \
 #            plcloud_warm(self.toa_bt, shadow_prob=shadow_prob)
-            self.plcloud_result = plcloud_warm(self.toa_bt, 
+            self.plcloud_result = plcloud_warm(self.toa_bt,
                                                cldprob=cldprob,
                                                shadow_prob=shadow_prob)
         else:
@@ -80,8 +80,8 @@ class FmaskResult(object):
 #                WT,Snow,Cloud,Shadow,
 #                dim,ul,resolu,zc,geoT,prj) = \
 #            plcloud(cldprob, shadow_prob=shadow_prob)
-            self.plcloud_result = plcloud(self.mtl, 
-                                          cldprob=cldprob, 
+            self.plcloud_result = plcloud(self.mtl,
+                                          cldprob=cldprob,
                                           shadow_prob=shadow_prob)
 
         # Make reference to cloud probability mask
@@ -178,6 +178,7 @@ def temp_raster(raster, geo_transform, projection,
 
 
 def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):
+    """ Apply classification symbology to raster layer """
     # See: QgsRasterRenderer* QgsSingleBandPseudoColorRendererWidget::renderer()
     # https://github.com/qgis/QGIS/blob/master/src/gui/raster/qgssinglebandpseudocolorrendererwidget.cpp
     # Get raster shader
@@ -214,7 +215,9 @@ def apply_symbology(rlayer, symbology, symbology_enabled, transparent=255):
     rlayer.setRenderer(renderer)
 
     # Set NoData transparency
-    nodata = [qgis.core.QgsRasterRange(transparent, transparent)]
+    if not isinstance(transparent, list):
+        transparent = [transparent]
+    nodata = [qgis.core.QgsRasterRange(t, t) for t in transparent]
     rlayer.dataProvider().setUserNoDataValue(1, nodata)
 
     # Repaint

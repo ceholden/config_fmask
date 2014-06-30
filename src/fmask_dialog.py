@@ -263,8 +263,6 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                     button.setEnabled(False)
                 self.enable_symbology[i] = False
 
-            print(i, cbox.text(), self.enable_symbology[i])
-
     @QtCore.pyqtSlot(QtGui.QPushButton)
     def button_box_clicked(self, button):
         """ Override for QDialogButttonBox slots
@@ -403,7 +401,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Set symbology for new raster layer
         pyfmask_utils.apply_symbology(self.plcloud_rlayer,
                                       self.symbology,
-                                      self.enable_symbology)
+                                      self.enable_symbology,
+                                      transparent=[255, 0])
 
         # Refresh layer symbology
         self.iface.legendInterface().refreshLayerSymbology(self.plcloud_rlayer)
