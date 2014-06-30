@@ -62,7 +62,9 @@ def im_info(filename):
     img  = gdal.Open(filename)
     geoT = img.GetGeoTransform()
     prj  = img.GetProjection()
-    return (geoT, prj)
+    size = (img.RasterYSize, img.RasterXSize)
+    ul_coord = (geoT[3], geoT[0])
+    return (geoT, prj, size, ul_coord)
 
 def imread(filename, resample=False, samples=None, lines=None):
     img = gdal.Open(filename)
@@ -587,7 +589,7 @@ def nd2toarbt(filename, images=None):
             im_B7 = imread(n_B7).astype(numpy.float32)
 
             # Retrieve the projection and geotransform info from the blue band (B1 LS 4,5,7)
-            geoT, prj = im_info(n_B1)
+            geoT, prj, sz, ul_coord = im_info(n_B1)
 
             # find pixels that are saturated in the visible bands
             B1Satu = im_B1 == 255.0
@@ -678,7 +680,8 @@ def nd2toarbt(filename, images=None):
         del im_B1, im_B2, im_B3, im_B4, im_B5, im_B7
 
         # We'll modify the return argument for the Python implementation (geoT,prj) are added to the list
-        return [im_B6,images,ijdim_ref,ul,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
+#        return [im_B6,images,ijdim_ref,ul,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
+        return [im_B6,images,sz,ul_coord,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
     elif (Lnum == 8):
         n_B10 = match_file(base, '.*B10.*')
         # Check that the thermal band resolution matches the reflectance bands.
@@ -713,7 +716,7 @@ def nd2toarbt(filename, images=None):
         im_B9 = imread(n_B9).astype(numpy.float32)
 
         # Retrieve the projection and geotransform info from the blue band (B2 in LS8)
-        geoT, prj = im_info(n_B2)
+        geoT, prj, sz, ul_coord = im_info(n_B2)
 
         # only processing pixesl where all bands have values (id_mssing)
         id_missing = numexpr.evaluate("(im_B2 == 0.0) | (im_B3 == 0.0) | (im_B4 == 0.0) | (im_B5 == 0.0) | (im_B6 == 0.0) | (im_B7 == 0.0) | (im_B9 == 0.0) | (im_B10 == 0.0)")
@@ -772,7 +775,8 @@ def nd2toarbt(filename, images=None):
         del im_B2, im_B3, im_B4, im_B5, im_B6, im_B7, im_B9
 
         # We'll modify the return argument for the Python implementation (geoT,prj) are added to the list
-        return [im_B10,images,ijdim_ref,ul,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
+#        return [im_B10,images,ijdim_ref,ul,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
+        return [im_B10,images,sz,ul_coord,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
 
     else:
         raise Exception('This sensor is not Landsat 4, 5, 7, or 8!')
