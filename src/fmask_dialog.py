@@ -36,7 +36,6 @@ from osgeo import gdal
 from ui_config_fmask import Ui_config_fmask
 
 import pyfmask_utils
-from fmask_cloud_masking_edit import plcloud
 
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                             level=logging.DEBUG,
@@ -104,6 +103,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         }
 
         self.setup_gui()
+
+        self.fmask_result = None
 
     def setup_gui(self):
         # Setup MTL input
@@ -205,6 +206,9 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # If we load it okay, then accept the value and load table
         self.mtl_file = mtl
         self.update_table_MTL()
+
+        self.fmask_result = pyfmask_utils.FmaskResult(self.mtl_file)
+
         self.allow_results(plcloud=True)
 
     @QtCore.pyqtSlot(int)
@@ -356,20 +360,16 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Find the Landsat spacecraft number
         landsat_num = int(self.mtl['SPACECRAFT_ID'][-1])
 
-        print('Running plcloud with cloud probability {p}'.
+        logger.info('Running plcloud with cloud probability {p}'.
               format(p=cloud_prob))
 
-        zen, azi, ptm, Temp, t_templ, t_temph, \
-            WT, Snow, Cloud, Shadow, \
-            dim, ul, resolu, zc, geoT, prj = \
-            \
-            plcloud(str(self.mtl_file),
-                    cldprob=cloud_prob,
-                    num_Lst=landsat_num)
+        self.fmask_result.get_plcloud(cloud_prob)
 
         # TODO if PREVIEW RESULT button: (else keep in memory)
         self.plcloud_filename, _tempfile = \
-            pyfmask_utils.temp_raster(Cloud * 4, geoT, prj)
+            pyfmask_utils.temp_raster(self.fmask_result.plcloud_mask * 4,
+                                      self.fmask_result.geoT,
+                                      self.fmask_result.prj)
         self.temp_files.append(_tempfile)
 
         # Open as raster layer
