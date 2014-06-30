@@ -777,7 +777,7 @@ def nd2toarbt(filename, images=None):
     else:
         raise Exception('This sensor is not Landsat 4, 5, 7, or 8!')
 
-def plcloud(filename, cldprob=22.5, num_Lst=None, images=None, log_filename="FMASK_LOGFILE.txt",
+def plcloud(filename, cldprob=22.5, num_Lst=None, images=None,
                    shadow_prob=False, mask=None):
     """
     Calculates a cloud mask for a landsat 5/7 scene.
@@ -803,8 +803,6 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None, log_filename="FMA
     :return:
         Tuple (zen,azi,ptm, temperature band (celcius*100),t_templ,t_temph, water mask, snow mask, cloud mask , shadow probability,dim,ul,resolu,zc).
     """
-    logfile = open(log_filename, 'w', buffering=0)
-    logfile.write("Processing FMASK cloud cover... \n")
     start_time = time.time()
 
     Temp,data,dim,ul,zen,azi,zc,satu_B1,satu_B2,satu_B3,resolu,geoT,prj = nd2toarbt(filename, images)
@@ -1081,8 +1079,8 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None, log_filename="FMA
     if ptm > 0.1:
         cloud_temp = Temp[cloud_mask]
 
-        logfile.write("Snow Percent: %f\n" % ((float(Snow[mask].sum()) / float(mask.sum())) * 100.0))
-        logfile.write("Cloud Mean: %f C\n" % (numpy.mean(cloud_temp) / 100.0))
+        logger.info("Snow Percent: %f\n" % ((float(Snow[mask].sum()) / float(mask.sum())) * 100.0))
+        logger.info("Cloud Mean: %f C\n" % (numpy.mean(cloud_temp) / 100.0))
 
         if numpy.sum(cloud_mask) > 0:
             cloud_stddev  = numpy.std(cloud_temp, dtype='float64', ddof=1) / 100.0
@@ -1090,18 +1088,20 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None, log_filename="FMA
             pct_lower     = numpy.percentile(cloud_temp, 83.5) / 100.0
             pct_upper_max = numpy.percentile(cloud_temp, 98.75) / 100.0
 
-            logfile.write("Standard Deviation: %f C\n" % cloud_stddev)
-            logfile.write("97.5 percentile: %f C\n" % pct_upper)
-            logfile.write("83.5 percentile: %f C\n" % pct_lower)
-            logfile.write("98.75 percentile: %f C\n" % pct_upper_max)
+            logger.debug("Standard Deviation: %f C\n" % cloud_stddev)
+            logger.debug("97.5 percentile: %f C\n" % pct_upper)
+            logger.debug("83.5 percentile: %f C\n" % pct_lower)
+            logger.debug("98.75 percentile: %f C\n" % pct_upper_max)
 
     cloud_skew    = 0.0 # TODO
-    #logfile.write("Skewness: %f\n" % cloud_skew)
 
-    logfile.write("Final Cloud Layer Percent: %f\n" % ((float(Cloud[cloud_mask].sum()) / float(mask.sum())) * 100.0))
-    logfile.write("FMask Process Time: %f seconds\n" % processing_time)
+    logger.info("Final Cloud Layer Percent: %f\n" % ((float(Cloud[cloud_mask].sum()) / float(mask.sum())) * 100.0))
+    logger.info("FMask Process Time: %f seconds\n" % processing_time)
 
-    logfile.write("Completed processing FMASK cloud cover...\n")
+    logger.info("Completed processing FMASK cloud cover...\n")
+
+    # We'll modify the return argument for the Python implementation (geoT,prj) are added to the list
+    return (zen,azi,ptm,Temp,t_templ,t_temph,WT,Snow,Cloud,Shadow,dim,ul,resolu,zc,geoT,prj)
 
     # We'll modify the return argument for the Python implementation (geoT,prj) are added to the list
     return (zen,azi,ptm,Temp,t_templ,t_temph,WT,Snow,Cloud,Shadow,dim,ul,resolu,zc,geoT,prj)
