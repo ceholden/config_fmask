@@ -405,7 +405,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     def unload(self):
         """ Disconnect / unload """
-        print('Removing temporary files')
+        logger.debug('Removing temporary files')
 
         for _tmp in self.temp_files:
             # Try deleting with GDAL
@@ -423,7 +423,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                 _tmp.close()
             except:
                 pass
-
+        logger.debug('Deleting Fmask result handler')
+        self.fmask_result = None
 
 # main for testing
 if __name__ == '__main__':

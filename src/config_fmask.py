@@ -74,12 +74,12 @@ class config_fmask(object):
         """ Shutdown by removing icons and disconnecting signals """
         # Remove toolbar icons
         self.iface.removeToolBarIcon(self.show_dialog)
-
         # Disconnect signals
         self.show_dialog.triggered.disconnect()
-
         # Tell dialog to unload resources
         self.dlg.unload()
+        self.dlg.close()
+        self.dlg = None
 
     # run method that performs all the real work
     def run(self):
