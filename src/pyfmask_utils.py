@@ -2,6 +2,7 @@
 import logging
 import os
 import tempfile
+import time
 
 from PyQt4 import QtGui
 import qgis.core
@@ -24,19 +25,33 @@ class FmaskResult(object):
         self.mtl = mtl
         
         # Should TOA and BT data be cached?
-        self.cache_toa_bt = cache_toa_bt
+        self._cache_toa_bt = cache_toa_bt
         # If so, have we cached it?
         self._cached_toa_bt = False
-
-        logger.info('Caching TOA and BT data?: {b}'.format(b=cache_toa_bt))
 
         # Cloud probability mask
         self.plcloud_mask = None
         self.geoT = None
         self.prj = None
 
+    @property
+    def cache_toa_bt(self):
+        return self._cache_toa_bt
+
+    @cache_toa_bt.setter
+    def cache_toa_bt(self, value):
+        """ Setter for caching of TOA/BT """
+        logger.info('Changed caching TOA and BT data preference to {b}'.
+            format(b=value))
+        # Switching off the caching - delete cached data
+        if self._cache_toa_bt and value is False:
+            self.toa_bt = None
+
+        self._cache_toa_bt = value
+
     def get_plcloud(self, cldprob=22.5, shadow_prob=False):
         """ Runs plcloud function according to cache_toa_bt policy """
+        start = time.time()
         # Load TOA and BT information if needed
         if not self._cached_toa_bt:
 #            (self.Temp, self.data,
@@ -49,7 +64,7 @@ class FmaskResult(object):
             logger.info('Cached TOA and BT data')
 
         # Run plcloud
-        if self.cache_toa_bt:
+        if self._cache_toa_bt:
             # Used cached output from nd2toarbt
 #            (zen,azi,ptm,
 #                Temp,t_templ,t_temph,
@@ -57,6 +72,7 @@ class FmaskResult(object):
 #                dim,ul,resolu,zc,geoT,prj) = \
 #            plcloud_warm(self.toa_bt, shadow_prob=shadow_prob)
             self.plcloud_result = plcloud_warm(self.toa_bt, 
+                                               cldprob=cldprob,
                                                shadow_prob=shadow_prob)
         else:
 #            (zen,azi,ptm,
@@ -64,14 +80,18 @@ class FmaskResult(object):
 #                WT,Snow,Cloud,Shadow,
 #                dim,ul,resolu,zc,geoT,prj) = \
 #            plcloud(cldprob, shadow_prob=shadow_prob)
-            self.plcloud_result = plcloud(self.mtl, cldprob=cldprob, 
-                                               shadow_prob=shadow_prob)
+            self.plcloud_result = plcloud(self.mtl, 
+                                          cldprob=cldprob, 
+                                          shadow_prob=shadow_prob)
 
         # Make reference to cloud probability mask
         self.plcloud_mask = self.plcloud_result[8]
         # Also include gdal info
         self.geoT = self.plcloud_result[14]
         self.prj = self.plcloud_result[15]
+
+        processing_time = time.time() - start
+        logger.info('Took {s}s to run plcloud'.format(s=processing_time))
 
 def mtl2dict(filename, to_float=True):
     """ Reads in filename and returns a dict with MTL metadata """

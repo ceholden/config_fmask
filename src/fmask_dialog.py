@@ -54,9 +54,12 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     enable_symbology = [False, False, True, True, True]
 
     # Button enablement switches
+    enable_cache_toa_bt = False
     enable_calc_plcloud = False
     enable_calc_match = False
     enable_save = False
+
+    cache_toa_bt = False
 
     # Fmask parameters
     cloud_prob = 22.5  # cloud_prob is scaled by 10 for slider
@@ -121,6 +124,10 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         # Save button
         self.but_save.clicked.connect(self.save_result)
 
+        # Cache TOA reflectance and brightness temp result
+        self.cbox_cache_toa_bt.setChecked(self.cache_toa_bt)
+        self.cbox_cache_toa_bt.stateChanged.connect(self.cache_on_off)
+
         # Configure cloud probability slider, label and button
         # Set to cloud_prob * 10 initially since it value comes from slider
         #    which is scaled by 10
@@ -174,7 +181,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.button_box.clicked.connect(self.button_box_clicked)
 
         # Disable all calculations initially
-        self.allow_results(plcloud=False, match=False, save=False)
+        self.allow_results(cache=False, plcloud=False, match=False, save=False)
 
     @QtCore.pyqtSlot()
     def find_MTL(self):
@@ -209,7 +216,14 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
         self.fmask_result = pyfmask_utils.FmaskResult(self.mtl_file)
 
-        self.allow_results(plcloud=True)
+        self.allow_results(cache=True, plcloud=True)
+
+    @QtCore.pyqtSlot()
+    def cache_on_off(self):
+        """ Toggle on/off for caching of TOA / BT """
+        do_cache = self.cbox_cache_toa_bt.isChecked()
+        self.fmask_result.cache_toa_bt = do_cache
+        logging.info('Changed cache option to: {b}'.format(b=do_cache))
 
     @QtCore.pyqtSlot(int)
     def update_cloud_prob(self, value):
@@ -340,8 +354,10 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 #                self.drivers.append(_driver.GetDescription())
         self.drivers = ['GTiff', 'ENVI']
 
-    def allow_results(self, plcloud=None, match=None, save=None):
+    def allow_results(self, cache=None, plcloud=None, match=None, save=None):
         """ Disable calculation buttons """
+        if cache is not None:
+            self.enable_cache_toa_bt = cache
         if plcloud is not None:
             self.enable_calc_plcloud = plcloud
         if match is not None:
@@ -349,6 +365,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         if save is not None:
             self.enable_save = save
 
+        self.cbox_cache_toa_bt.setEnabled(self.enable_cache_toa_bt)
         self.but_calc_plcloud.setEnabled(self.enable_calc_plcloud)
         self.but_calc_match.setEnabled(self.enable_calc_match)
         self.but_save.setEnabled(self.enable_save)

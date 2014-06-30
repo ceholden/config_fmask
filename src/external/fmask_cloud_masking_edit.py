@@ -10,7 +10,7 @@
 #     + added skimage library
 #     + better handling for imagery of different resolutions
 
-import sys, re, gc, time, math, logging
+import sys, re, gc, math, logging
 import datetime
 import os.path
 import argparse
@@ -803,8 +803,6 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None,
     :return:
         Tuple (zen,azi,ptm, temperature band (celcius*100),t_templ,t_temph, water mask, snow mask, cloud mask , shadow probability,dim,ul,resolu,zc).
     """
-    start_time = time.time()
-
     Temp,data,dim,ul,zen,azi,zc,satu_B1,satu_B2,satu_B3,resolu,geoT,prj = nd2toarbt(filename, images)
 
     if num_Lst < 8: # Landsat 4~7
@@ -1071,7 +1069,6 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None,
     Cloud = Cloud.astype('uint8')
     Cloud[mask == 0] = 255
     Shadow[mask == 0] = 255
-    processing_time = time.time() - start_time
 
     gc.collect()
     cloud_mask = (Cloud == 1) & mask
@@ -1096,7 +1093,6 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None,
     cloud_skew    = 0.0 # TODO
 
     logger.info("Final Cloud Layer Percent: %f\n" % ((float(Cloud[cloud_mask].sum()) / float(mask.sum())) * 100.0))
-    logger.info("FMask Process Time: %f seconds\n" % processing_time)
 
     logger.info("Completed processing FMASK cloud cover...\n")
 
@@ -1398,7 +1394,6 @@ def plcloud_warm(toa_bt, cldprob=22.5, num_Lst=None,
     Cloud = Cloud.astype('uint8')
     Cloud[mask == 0] = 255
     Shadow[mask == 0] = 255
-    processing_time = time.time() - start_time
 
     gc.collect()
     cloud_mask = (Cloud == 1) & mask
@@ -1421,7 +1416,6 @@ def plcloud_warm(toa_bt, cldprob=22.5, num_Lst=None,
             logger.debug("98.75 percentile: %f C\n" % pct_upper_max)
 
     logger.info("Final Cloud Layer Percent: %f\n" % ((float(Cloud[cloud_mask].sum()) / float(mask.sum())) * 100.0))
-    logger.info("FMask Process Time: %f seconds\n" % processing_time)
 
     logger.info("Completed processing FMASK cloud cover...\n")
 
