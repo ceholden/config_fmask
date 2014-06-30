@@ -22,6 +22,7 @@
 from __future__ import division
 from __future__ import print_function
 
+from collections import OrderedDict
 from functools import partial
 import logging
 import os
@@ -44,13 +45,13 @@ logger = logging.getLogger(__name__)
 
 class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
-    symbology = {
-        'land':    (0, 255, 0, 255),
-        'water':    (0, 0, 255, 255),
-        'shadow':    (125, 125, 125, 255),
-        'snow':    (255, 66, 0, 255),
-        'cloud':    (255, 0, 248, 255)
-    }
+    symbology = OrderedDict((
+        ('land', (0, 255, 0, 255)),
+        ('water', (0, 0, 255, 255)),
+        ('shadow', (125, 125, 125, 255)),
+        ('snow', (255, 66, 0, 255)),
+        ('cloud', (255, 0, 248, 255))
+    ))
     enable_symbology = [False, False, True, True, True]
 
     # Button enablement switches
@@ -87,23 +88,23 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.setupUi(self)
 
         # Create pairing of QCheckBox with QLabel and QPushButton
-        self.symbology_pairing = {
-            'land': (self.cbox_land,
-                     self.lab_land_color,
-                     self.button_sym_land),
-            'water': (self.cbox_water,
-                      self.lab_water_color,
-                      self.button_sym_water),
-            'shadow': (self.cbox_shadow,
-                       self.lab_shadow_color,
-                       self.button_sym_shadow),
-            'snow': (self.cbox_snow,
-                     self.lab_snow_color,
-                     self.button_sym_snow),
-            'cloud': (self.cbox_cloud,
-                      self.lab_cloud_color,
-                      self.button_sym_cloud)
-        }
+        self.symbology_pairing = OrderedDict((
+            ('land', (self.cbox_land,
+                      self.lab_land_color,
+                      self.button_sym_land)),
+            ('water', (self.cbox_water,
+                       self.lab_water_color,
+                       self.button_sym_water)),
+            ('shadow', (self.cbox_shadow,
+                        self.lab_shadow_color,
+                        self.button_sym_shadow)),
+            ('snow', (self.cbox_snow,
+                      self.lab_snow_color,
+                      self.button_sym_snow)),
+            ('cloud', (self.cbox_cloud,
+                       self.lab_cloud_color,
+                       self.button_sym_cloud))
+        ))
 
         self.setup_gui()
 
@@ -261,6 +262,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                 if button.isEnabled():
                     button.setEnabled(False)
                 self.enable_symbology[i] = False
+
+            print(i, cbox.text(), self.enable_symbology[i])
 
     @QtCore.pyqtSlot(QtGui.QPushButton)
     def button_box_clicked(self, button):
