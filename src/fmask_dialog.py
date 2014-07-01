@@ -20,7 +20,6 @@
  ***************************************************************************/
 """
 from __future__ import division
-from __future__ import print_function
 
 from collections import OrderedDict
 from functools import partial
@@ -236,7 +235,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         self.lab_cloud_prob_val.setAlignment(QtCore.Qt.AlignRight |
                                              QtCore.Qt.AlignCenter)
 
-        self.allow_results()
+        self.allow_results(match=False, save=False)
 
     @QtCore.pyqtSlot(int)
     def update_dilation(self, value, variable):
@@ -276,13 +275,13 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
         button_role = self.button_box.buttonRole(button)
 
         if button_role == QtGui.QDialogButtonBox.AcceptRole:
-            print('Accept')
+            logger.debug('Accept')
         elif button_role == QtGui.QDialogButtonBox.ApplyRole:
-            print("Apply")
+            logger.debug("Apply")
         elif button_role == QtGui.QDialogButtonBox.HelpRole:
-            print('TODO - Help information')
+            logger.debug('TODO - Help information')
         elif button_role == QtGui.QDialogButtonBox.ResetRole:
-            print('TODO - Reset to defaults')
+            logger.debug('TODO - Reset to defaults')
 
     @QtCore.pyqtSlot(str)
     def select_color(self, fmask):
@@ -373,6 +372,7 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
 
     @QtCore.pyqtSlot()
     def do_plcloud(self, cloud_prob=None):
+        """ Perform cloud masking and add result to QGIS """
         if cloud_prob is None:
             cloud_prob = self.cloud_prob
         # Find the Landsat spacecraft number
@@ -413,13 +413,49 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
     @QtCore.pyqtSlot()
     def do_cloud_matching(self):
         """ Perform cloud/shadow matching and finalize mask """
-        print('Cloud matching not implemented yet...')
-        pass
+        logger.info('Running fcssm with dilation:\n' +
+                    'cloud: {c}\n'.format(c=self.cloud_dilate) +
+                    'shadow: {s}'.format(s=self.shadow_dilate) +
+                    'snow: {sn}'.format(sn=self.snow_dilate)
+                    )
+
+        # Run Fmask FCSSM
+        self.fmask_result.do_fcssm(self.cloud_dilate,
+                                   self.shadow_dilate,
+                                   self.snow_dilate)
+
+        # TODO if PREVIEW RESULT button: (else keep in memory)
+        self.fcssm_filename, _tempfile = \
+            pyfmask_utils.temp_raster(self.fmask_result.fmask_final,
+                                      self.fmask_result.geoT,
+                                      self.fmask_result.prj)
+        self.temp_files.append(_tempfile)
+
+        # Open as raster layer
+        rlayer_name = 'Fmask (cloud probability {p})'.format(p=self.cloud_prob)
+        self.fmask_rlayer = qgis.core.QgsRasterLayer(self.fcssm_filename,
+                                                     rlayer_name)
+
+        # Add to QGIS
+        qgis.core.QgsMapLayerRegistry.instance().addMapLayer(
+            self.fmask_rlayer)
+
+        # Set symbology for new raster layer
+        pyfmask_utils.apply_symbology(self.fmask_rlayer,
+                                      self.symbology,
+                                      self.enable_symbology,
+                                      transparent=[255])
+
+        # Refresh layer symbology
+        self.iface.legendInterface().refreshLayerSymbology(self.fmask_rlayer)
+
+        # Enable matching button
+        self.allow_results(save=True)
 
     @QtCore.pyqtSlot()
     def save_result(self):
         """ Save final result to disk """
-        print('Saving of results not implemented yet...')
+        logger.warning('Saving of results not implemented yet...')
         pass
 
     def unload(self):

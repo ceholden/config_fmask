@@ -11,7 +11,7 @@ import numpy as np
 from osgeo import gdal
 from osgeo import gdal_array
 
-from fmask_cloud_masking_edit import nd2toarbt, plcloud, plcloud_warm
+from fmask_cloud_masking_edit import nd2toarbt, plcloud, plcloud_warm, fcssm
 
 gdal.UseExceptions()
 
@@ -92,6 +92,41 @@ class FmaskResult(object):
 
         processing_time = time.time() - start
         logger.info('Took {s}s to run plcloud'.format(s=processing_time))
+
+    def do_fcssm(self, cloudbuffer=3, shadowbuffer=3, snowbuffer=3):
+        """ Run Fmask FCCSM """
+
+        logger.debug('dim: {d}'.format(d=self.plcloud_result[10]))
+
+        start = time.time()
+
+#        similar_num, cspt, shadow_cal, cs_final = fcssm(zen, azi, ptm,
+#            Temp, t_templ, t_temph,
+#            WT, Snow, Cloud, Shadow,
+#            dim, resolu, zc,
+#            cloudbuffer, shadowbuffer, snowbuffer)
+        self.similar_num, self.cspt, self.shadow_cal, self.fmask_final = fcssm(
+            self.plcloud_result[0], # zenith angle
+            self.plcloud_result[1], # azimuth angle
+            self.plcloud_result[2], # ptm
+            self.plcloud_result[3], # Temp
+            self.plcloud_result[4], # t_templ
+            self.plcloud_result[5], # t_temph
+            self.plcloud_result[6], # WT
+            self.plcloud_result[7], # Snow
+            self.plcloud_result[8], # Cloud
+            self.plcloud_result[9], # Shadow
+            self.plcloud_result[10], # dim
+            self.plcloud_result[12], # resolution
+            self.plcloud_result[13], # zone coordinate
+            cloudbuffer,
+            shadowbuffer,
+            snowbuffer
+        )
+
+        processing_time = time.time() - start
+        logger.info('Took {s}s to run fcssm'.format(s=processing_time))
+
 
 def mtl2dict(filename, to_float=True):
     """ Reads in filename and returns a dict with MTL metadata """

@@ -1577,6 +1577,7 @@ def fcssm(Sun_zen,Sun_azi,ptm,Temp,t_templ,t_temph,Water,Snow,plcim,plsim,ijDim,
         y_ur = rows[num]
 
         # get view angle geometry
+        print x_ul, y_ul, x_ur, y_ur, x_ll, y_ll, x_lr, y_lr
         (A, B, C, omiga_par, omiga_per) = viewgeo(float(x_ul), float(y_ul), float(x_ur), float(y_ur), float(x_ll), float(y_ll), float(x_lr), float(y_lr))
 
         # Segmentate each cloud
@@ -1867,7 +1868,7 @@ if __name__ == '__main__':
     Lnum=int(LID[len(LID)-1])
 
     st = datetime.datetime.now()
-    zen,azi,ptm,Temp,t_templ,t_temph,WT,Snow,Cloud,Shadow,dim,ul,resolu,zc,geoT,prj = plcloud(mtl, cldprob, num_Lst=Lnum, shadow_prob=True, log_filename=log_fname)
+    zen, azi, ptm, Temp, t_templ, t_temph, WT, Snow, Cloud, Shadow, dim, ul, resolu, zc, geoT, prj = plcloud(mtl, cldprob, num_Lst=Lnum, shadow_prob=True, log_filename=log_fname)
     et = datetime.datetime.now()
     print 'time taken for plcloud function: ', et - st
     st = datetime.datetime.now()
