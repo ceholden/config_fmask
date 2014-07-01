@@ -1788,8 +1788,8 @@ def viewgeo(x_ul, y_ul, x_ur, y_ur, x_ll, y_ll, x_lr, y_lr):
     y_u = (y_ul + y_ur) / 2
     y_l = (y_ll + y_lr) / 2
 
-    K_ulr =(y_ul - y_ur) / (x_ul - x_ur) # get k of the upper left and right points
-    K_llr = (y_ll - y_lr) / (x_ll - x_lr) # get k of the lower left and right points
+    K_ulr =(y_ul - y_ur) / max(1, (x_ul - x_ur)) # get k of the upper left and right points
+    K_llr = (y_ll - y_lr) / max(1, (x_ll - x_lr)) # get k of the lower left and right points
     K_aver = (K_ulr + K_llr) / 2
     omiga_par = math.atan(K_aver) # get the angle of parallel lines k (in pi)
 
