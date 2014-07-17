@@ -518,7 +518,7 @@ def nd2toarbt(filename, images=None):
 
         # Band6
         if Lnum == 7:
-            n_B6 = match_file(base, '.*B61.*')
+            n_B6 = match_file(base, '.*B6*1.*')
         else:
             n_B6 = match_file(base, '.*B6.*')
 
