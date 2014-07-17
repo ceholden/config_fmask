@@ -193,8 +193,8 @@ class FmaskDialog(QtGui.QDialog, Ui_config_fmask):
                                   self.mtl_file if os.path.isdir(self.mtl_file)
                                   else os.path.dirname(self.mtl_file),
                                   '*MTL.txt'))
-
-        self.edit_MTL.setText(mtl)
+        if mtl != '':
+            self.edit_MTL.setText(mtl)
 
     @QtCore.pyqtSlot()
     def load_MTL(self):
