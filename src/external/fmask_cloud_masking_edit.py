@@ -657,7 +657,7 @@ def nd2toarbt(filename, images=None):
         # DN to TOA reflectance with 0.0001 scale_factor
         # This formulae is similar to that used for LS 4,5,7. But is different to that given by
         # https://landsat.usgs.gov/Landsat8_Using_Product.php : Noted JS 2013/11/28
-        print 'From DNs to TOA ref & BT\n'
+        logger.info('From DNs to TOA ref & BT')
         im_B2  = numexpr.evaluate("((Rma - Rmi) / (Qma - Qmi)) * (im_B2 - Qmi) + Rmi", { 'Rma': Refmax[0], 'Rmi': Refmin[0], 'Qma': Qcalmax[0], 'Qmi': Qcalmin[0] }, locals())
         im_B3  = numexpr.evaluate("((Rma - Rmi) / (Qma - Qmi)) * (im_B3 - Qmi) + Rmi", { 'Rma': Refmax[1], 'Rmi': Refmin[1], 'Qma': Qcalmax[1], 'Qmi': Qcalmin[1] }, locals())
         im_B4  = numexpr.evaluate("((Rma - Rmi) / (Qma - Qmi)) * (im_B4 - Qmi) + Rmi", { 'Rma': Refmax[2], 'Rmi': Refmin[2], 'Qma': Qcalmax[2], 'Qmi': Qcalmin[2] }, locals())
@@ -1506,7 +1506,7 @@ def fcssm(Sun_zen,Sun_azi,ptm,Temp,t_templ,t_temph,Water,Snow,plcim,plsim,ijDim,
         y_ur = rows[num]
 
         # get view angle geometry
-        print x_ul, y_ul, x_ur, y_ur, x_ll, y_ll, x_lr, y_lr
+        #print x_ul, y_ul, x_ur, y_ur, x_ll, y_ll, x_lr, y_lr
         (A, B, C, omiga_par, omiga_per) = viewgeo(float(x_ul), float(y_ul), float(x_ur), float(y_ur), float(x_ll), float(y_ll), float(x_lr), float(y_lr))
 
         # Segmentate each cloud
@@ -1747,26 +1747,12 @@ def mat_truecloud(x, y, h, A, B, C, omiga_par, omiga_per):
 
     return (x_new, y_new)
 
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description='Computes the Fmask algorithm. Cloud, cloud shadow and Fmask combined (contains thecloud, cloud shadow and snow masks in a single array) are output to disk.')
-    parser.add_argument('--mtl', required=True, help='The full file path to the Landsat MTL file.')
-    parser.add_argument('--cldprob', type=float, default=22.5, help='The cloud probability for the scene. Default is 22.5 percent.')
-    parser.add_argument('--cldpix', type=int, default=3, help='The number of pixels to be dilated for the cloud mask. Default is 3.')
-    parser.add_argument('--sdpix', type=int, default=3, help='The number of pixels to be dilated for the cloud shadow mask. Default is 3.')
-    parser.add_argument('--snpix', type=int, default=3, help='The number of pixels to be dilated for the snow mask. Default is 3.')
-    parser.add_argument('--outdir', required=True, help='The full file path of the output directory that will contain the Fmask results.')
-
-    parsed_args = parser.parse_args()
-    mtl         = parsed_args.mtl
-    cldprob     = parsed_args.cldprob
-    cldpix      = parsed_args.cldpix
-    sdpix       = parsed_args.sdpix
-    snpix       = parsed_args.snpix
-    outdir      = parsed_args.outdir
-
+def run_FMask(mtl, outdir, cldprob=22.5, cldpix=3, sdpix=3, snpix=3):
     # Check that the MTL file exists
     assert os.path.exists(mtl), "Invalid filename: %s" % mtl
+
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
 
     # Check that the output directory exists
     assert os.path.exists(outdir), "Directory doesn't exist: %s" % outdir
@@ -1799,11 +1785,11 @@ if __name__ == '__main__':
     st = datetime.datetime.now()
     zen, azi, ptm, Temp, t_templ, t_temph, WT, Snow, Cloud, Shadow, dim, ul, resolu, zc, geoT, prj = plcloud(mtl, cldprob, num_Lst=Lnum, shadow_prob=True)
     et = datetime.datetime.now()
-    print 'time taken for plcloud function: ', et - st
+    logger.info('time taken for plcloud function: %s', str(et - st))
     st = datetime.datetime.now()
     similar_num, cspt, shadow_cal, cs_final = fcssm(zen, azi, ptm, Temp, t_templ, t_temph, WT, Snow, Cloud, Shadow, dim, resolu, zc, cldpix, sdpix, snpix)
     et = datetime.datetime.now()
-    print 'time taken for fcssm function: ', et - st
+    logger.info('time taken for fcssm function: %s', str(et - st))
 
     c = gdal.GetDriverByName('ENVI').Create(cloud_fname, Cloud.shape[1], Cloud.shape[0], 1, gdal.GDT_Byte)
     c.SetGeoTransform(geoT)
@@ -1824,3 +1810,28 @@ if __name__ == '__main__':
     c = None
 
     # TODO: Save water/snow masks?
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Computes the Fmask algorithm. Cloud, cloud shadow and Fmask combined (contains thecloud, cloud shadow and snow masks in a single array) are output to disk.')
+    parser.add_argument('--mtl', required=True, help='The full file path to the Landsat MTL file.')
+    parser.add_argument('--cldprob', type=float, default=22.5, help='The cloud probability for the scene. Default is 22.5 percent.')
+    parser.add_argument('--cldpix', type=int, default=3, help='The number of pixels to be dilated for the cloud mask. Default is 3.')
+    parser.add_argument('--sdpix', type=int, default=3, help='The number of pixels to be dilated for the cloud shadow mask. Default is 3.')
+    parser.add_argument('--snpix', type=int, default=3, help='The number of pixels to be dilated for the snow mask. Default is 3.')
+    parser.add_argument('--outdir', required=True, help='The full file path of the output directory that will contain the Fmask results.')
+
+    parsed_args = parser.parse_args()
+    mtl         = parsed_args.mtl
+    cldprob     = parsed_args.cldprob
+    cldpix      = parsed_args.cldpix
+    sdpix       = parsed_args.sdpix
+    snpix       = parsed_args.snpix
+    outdir      = parsed_args.outdir
+
+    logger.setLevel(logging.INFO)
+    logging.basicConfig()
+    run_FMask(mtl, outdir, cldprob, cldpix, sdpix, snpix)
+
+
