@@ -13,6 +13,7 @@
 import sys, re, gc, math, logging
 import datetime
 import os.path
+from glob import glob
 import argparse
 import numpy, numexpr
 import scipy.stats
@@ -33,21 +34,13 @@ sun_earth_distance = { 1: 0.98331, 2: 0.98330, 3: 0.98330, 4: 0.98330, 5: 0.9833
 
 # Replacement for original dir() function in this module.
 # Renamed to avoid name collision with builtin.
-
 def match_file(dir_path, pattern):
+    res = glob(os.path.join(dir_path, pattern))
 
-    # Ignore filenames starting with '.' character, e.g. rsync work files.
-
-    for f in sorted([x for x in os.listdir(dir_path) if not x.startswith('.')]):
-        if re.search(pattern, f):
-            return os.path.join(dir_path, f)
-
-    # No match -- complain loudly (or bail out??)
-
-    logger.error('ERROR: %s.match_file("%s", "%s") found no match',
-              __file__.strip('.py'), dir_path, pattern
-          )
-    return None
+    if len(res) == 0:
+        return None
+    else:
+        return res[0]
 
 
 def im_info(filename):
@@ -78,71 +71,6 @@ def imread(filename, resample=False, samples=None, lines=None):
         return outds.ReadAsArray()
     else:
         return band.ReadAsArray()
-
-def imfill_pybuffer(img, ts):
-    import itk
-
-    # Convert img to ITK image
-    image_type = itk.Image[itk.F, 2]
-
-    # Have to transfer via a file for now... (until PyBuffer WrapITK extension is fixed)
-    inp = itk.PyBuffer[image_type].GetImageFromArray(img)
-
-    # Run grayscale connected closing filter
-    #filter = itk.GrayscaleConnectedClosingImageFilter[image_type, image_type].New()
-    fltr = itk.GrayscaleFillholeImageFilter[image_type, image_type].New()
-    fltr.SetInput(inp)
-    fltr.Update()
-
-    # Copy results from ITK image back to numpy array
-    output_array = itk.PyBuffer[image_type].GetArrayFromImage(fltr.GetOutput())
-
-    return output_array
-
-def imfill(img, ts):
-    import itk
-
-    # Convert img to ITK image
-    image_type = itk.Image[itk.SS, 2]
-
-    # Have to transfer via a file for now... (until PyBuffer WrapITK extension is fixed)
-    logger.debug("serializing")
-    scale_min = img.min()
-    scale_max = img.max()
-    c = gdal.GetDriverByName('GTiff').Create("img_%s.tif" % ts, img.shape[1], img.shape[0], 1, gdal.GDT_UInt16)
-    c.GetRasterBand(1).WriteArray((((img-img.min())/(img.max()-img.min()))*32767.0).astype('int16'))
-    c = None
-    logger.debug("deserializing")
-    c = itk.ImageFileReader[image_type].New()
-    c.SetFileName("img_%s.tif" % ts)
-    inp = c.GetOutput()
-    #inp = itk.PyBuffer[image_type].GetImageFromArray(img)
-
-    # Run grayscale connected closing filter
-    logger.debug("processing")
-    #fltr = itk.GrayscaleConnectedClosingImageFilter[image_type, image_type].New()
-    fltr = itk.GrayscaleFillholeImageFilter[image_type, image_type].New()
-    fltr.SetInput(inp)
-    fltr.Update()
-
-    # Save debug image (using ITK)
-    logger.debug("serializing")
-    test = itk.ImageFileWriter[image_type].New()
-    test.SetFileName("holes_%s.tif" % ts)
-    test.SetInput(fltr.GetOutput())
-    test.Update()
-    test = None
-
-    logger.debug("deserializing")
-    output_array = imread("holes_%s.tif" % ts)
-    output_array = scale_min + (output_array.astype('float32')/32767.0)*(scale_max - scale_min)
-    # Copy results from ITK image back to numpy array
-    #output_array = itk.PyBuffer[image_type].GetArrayFromImage(fltr.GetOutput())
-
-    os.remove("img_%s.tif" % ts);
-    os.remove("holes_%s.tif" % ts);
-
-    return output_array
 
 def imfill_skimage(img):
     """
@@ -385,7 +313,7 @@ def lndhdrread(filename):
             ul=(ulx,uly)
             # Read in date of year
             char_doy=data['LANDSAT_SCENE_ID']
-            doy=int(char_doy[14:16]) # This may need to change to 14:16. TODO Test this!
+            doy=int(char_doy[13:16]) # This may need to change to 14:16. TODO Test this!
 
     elif (Lnum == 8):
             # Retrieve LS8 info
@@ -518,9 +446,9 @@ def nd2toarbt(filename, images=None):
 
         # Band6
         if Lnum == 7:
-            n_B6 = match_file(base, '.*B6*1.*')
+            n_B6 = match_file(base, '*B6*1.*')
         else:
-            n_B6 = match_file(base, '.*B6.*')
+            n_B6 = match_file(base, '*B6.*')
 
         # Check that the thermal band resolution matches the reflectance bands.
         ref_lines, ref_samples = ijdim_ref
@@ -570,22 +498,22 @@ def nd2toarbt(filename, images=None):
 
         else:
             # Band1
-            n_B1 = match_file(base, '.*B1.*')
+            n_B1 = match_file(base, '*B1.*')
             im_B1 = imread(n_B1).astype(numpy.float32)
             # Band2
-            n_B2 = match_file(base, '.*B2.*')
+            n_B2 = match_file(base, '*B2.*')
             im_B2 = imread(n_B2).astype(numpy.float32)
             # Band3
-            n_B3 = match_file(base, '.*B3.*')
+            n_B3 = match_file(base, '*B3.*')
             im_B3 = imread(n_B3).astype(numpy.float32)
             # Band4
-            n_B4 = match_file(base, '.*B4.*')
+            n_B4 = match_file(base, '*B4.*')
             im_B4 = imread(n_B4).astype(numpy.float32)
             # Band5
-            n_B5 = match_file(base, '.*B5.*')
+            n_B5 = match_file(base, '*B5.*')
             im_B5 = imread(n_B5).astype(numpy.float32)
             # Band7
-            n_B7 = match_file(base, '.*B7.*')
+            n_B7 = match_file(base, '*B7.*')
             im_B7 = imread(n_B7).astype(numpy.float32)
 
             # Retrieve the projection and geotransform info from the blue band (B1 LS 4,5,7)
@@ -683,7 +611,7 @@ def nd2toarbt(filename, images=None):
 #        return [im_B6,images,ijdim_ref,ul,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
         return [im_B6,images,sz,ul_coord,zen,azi,zc,B1Satu,B2Satu,B3Satu,resolu,geoT,prj]
     elif (Lnum == 8):
-        n_B10 = match_file(base, '.*B10.*')
+        n_B10 = match_file(base, '*B10.*')
         # Check that the thermal band resolution matches the reflectance bands.
         ref_lines, ref_samples = ijdim_ref
         thm_lines, thm_samples = ijdim_thm
@@ -694,25 +622,25 @@ def nd2toarbt(filename, images=None):
             im_B10 = imread(n_B10).astype(numpy.float32)
 
         # Band2
-        n_B2 = match_file(base, '.*B2.*')
+        n_B2 = match_file(base, '*B2.*')
         im_B2 = imread(n_B2).astype(numpy.float32)
         # Band3
-        n_B3 = match_file(base, '.*B3.*')
+        n_B3 = match_file(base, '*B3.*')
         im_B3 = imread(n_B3).astype(numpy.float32)
         # Band4
-        n_B4 = match_file(base, '.*B4.*')
+        n_B4 = match_file(base, '*B4.*')
         im_B4 = imread(n_B4).astype(numpy.float32)
         # Band5
-        n_B5 = match_file(base, '.*B5.*')
+        n_B5 = match_file(base, '*B5.*')
         im_B5 = imread(n_B5).astype(numpy.float32)
         # Band6
-        n_B6 = match_file(base, '.*B6.*')
+        n_B6 = match_file(base, '*B6.*')
         im_B6 = imread(n_B6).astype(numpy.float32)
         # Band7
-        n_B7 = match_file(base, '.*B7.*')
+        n_B7 = match_file(base, '*B7.*')
         im_B7 = imread(n_B7).astype(numpy.float32)
         # Band9
-        n_B9 = match_file(base, '.*B9.*')
+        n_B9 = match_file(base, '*B9.*')
         im_B9 = imread(n_B9).astype(numpy.float32)
 
         # Retrieve the projection and geotransform info from the blue band (B2 in LS8)
@@ -729,7 +657,7 @@ def nd2toarbt(filename, images=None):
         # DN to TOA reflectance with 0.0001 scale_factor
         # This formulae is similar to that used for LS 4,5,7. But is different to that given by
         # https://landsat.usgs.gov/Landsat8_Using_Product.php : Noted JS 2013/11/28
-        print 'From DNs to TOA ref & BT\n'
+        logger.info('From DNs to TOA ref & BT')
         im_B2  = numexpr.evaluate("((Rma - Rmi) / (Qma - Qmi)) * (im_B2 - Qmi) + Rmi", { 'Rma': Refmax[0], 'Rmi': Refmin[0], 'Qma': Qcalmax[0], 'Qmi': Qcalmin[0] }, locals())
         im_B3  = numexpr.evaluate("((Rma - Rmi) / (Qma - Qmi)) * (im_B3 - Qmi) + Rmi", { 'Rma': Refmax[1], 'Rmi': Refmin[1], 'Qma': Qcalmax[1], 'Qmi': Qcalmin[1] }, locals())
         im_B4  = numexpr.evaluate("((Rma - Rmi) / (Qma - Qmi)) * (im_B4 - Qmi) + Rmi", { 'Rma': Refmax[2], 'Rmi': Refmin[2], 'Qma': Qcalmax[2], 'Qmi': Qcalmin[2] }, locals())
@@ -1010,6 +938,7 @@ def plcloud(filename, cldprob=22.5, num_Lst=None, images=None,
 
         ## Start with potential cloud shadow mask
         if shadow_prob:
+
             # band 4 flood fill
             nir = data4.astype('float32')
             # estimating background (land) Band 4 ref
@@ -1577,7 +1506,7 @@ def fcssm(Sun_zen,Sun_azi,ptm,Temp,t_templ,t_temph,Water,Snow,plcim,plsim,ijDim,
         y_ur = rows[num]
 
         # get view angle geometry
-        print x_ul, y_ul, x_ur, y_ur, x_ll, y_ll, x_lr, y_lr
+        #print x_ul, y_ul, x_ur, y_ur, x_ll, y_ll, x_lr, y_lr
         (A, B, C, omiga_par, omiga_per) = viewgeo(float(x_ul), float(y_ul), float(x_ur), float(y_ur), float(x_ll), float(y_ll), float(x_lr), float(y_lr))
 
         # Segmentate each cloud
@@ -1818,26 +1747,12 @@ def mat_truecloud(x, y, h, A, B, C, omiga_par, omiga_per):
 
     return (x_new, y_new)
 
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description='Computes the Fmask algorithm. Cloud, cloud shadow and Fmask combined (contains thecloud, cloud shadow and snow masks in a single array) are output to disk.')
-    parser.add_argument('--mtl', required=True, help='The full file path to the Landsat MTL file.')
-    parser.add_argument('--cldprob', type=float, default=22.5, help='The cloud probability for the scene. Default is 22.5 percent.')
-    parser.add_argument('--cldpix', type=int, default=3, help='The number of pixels to be dilated for the cloud mask. Default is 3.')
-    parser.add_argument('--sdpix', type=int, default=3, help='The number of pixels to be dilated for the cloud shadow mask. Default is 3.')
-    parser.add_argument('--snpix', type=int, default=3, help='The number of pixels to be dilated for the snow mask. Default is 3.')
-    parser.add_argument('--outdir', required=True, help='The full file path of the output directory that will contain the Fmask results.')
-
-    parsed_args = parser.parse_args()
-    mtl         = parsed_args.mtl
-    cldprob     = parsed_args.cldprob
-    cldpix      = parsed_args.cldpix
-    sdpix       = parsed_args.sdpix
-    snpix       = parsed_args.snpix
-    outdir      = parsed_args.outdir
-
+def run_FMask(mtl, outdir, cldprob=22.5, cldpix=3, sdpix=3, snpix=3):
     # Check that the MTL file exists
     assert os.path.exists(mtl), "Invalid filename: %s" % mtl
+
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
 
     # Check that the output directory exists
     assert os.path.exists(outdir), "Directory doesn't exist: %s" % outdir
@@ -1868,13 +1783,13 @@ if __name__ == '__main__':
     Lnum=int(LID[len(LID)-1])
 
     st = datetime.datetime.now()
-    zen, azi, ptm, Temp, t_templ, t_temph, WT, Snow, Cloud, Shadow, dim, ul, resolu, zc, geoT, prj = plcloud(mtl, cldprob, num_Lst=Lnum, shadow_prob=True, log_filename=log_fname)
+    zen, azi, ptm, Temp, t_templ, t_temph, WT, Snow, Cloud, Shadow, dim, ul, resolu, zc, geoT, prj = plcloud(mtl, cldprob, num_Lst=Lnum, shadow_prob=True)
     et = datetime.datetime.now()
-    print 'time taken for plcloud function: ', et - st
+    logger.info('time taken for plcloud function: %s', str(et - st))
     st = datetime.datetime.now()
     similar_num, cspt, shadow_cal, cs_final = fcssm(zen, azi, ptm, Temp, t_templ, t_temph, WT, Snow, Cloud, Shadow, dim, resolu, zc, cldpix, sdpix, snpix)
     et = datetime.datetime.now()
-    print 'time taken for fcssm function: ', et - st
+    logger.info('time taken for fcssm function: %s', str(et - st))
 
     c = gdal.GetDriverByName('ENVI').Create(cloud_fname, Cloud.shape[1], Cloud.shape[0], 1, gdal.GDT_Byte)
     c.SetGeoTransform(geoT)
@@ -1895,3 +1810,28 @@ if __name__ == '__main__':
     c = None
 
     # TODO: Save water/snow masks?
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Computes the Fmask algorithm. Cloud, cloud shadow and Fmask combined (contains thecloud, cloud shadow and snow masks in a single array) are output to disk.')
+    parser.add_argument('--mtl', required=True, help='The full file path to the Landsat MTL file.')
+    parser.add_argument('--cldprob', type=float, default=22.5, help='The cloud probability for the scene. Default is 22.5 percent.')
+    parser.add_argument('--cldpix', type=int, default=3, help='The number of pixels to be dilated for the cloud mask. Default is 3.')
+    parser.add_argument('--sdpix', type=int, default=3, help='The number of pixels to be dilated for the cloud shadow mask. Default is 3.')
+    parser.add_argument('--snpix', type=int, default=3, help='The number of pixels to be dilated for the snow mask. Default is 3.')
+    parser.add_argument('--outdir', required=True, help='The full file path of the output directory that will contain the Fmask results.')
+
+    parsed_args = parser.parse_args()
+    mtl         = parsed_args.mtl
+    cldprob     = parsed_args.cldprob
+    cldpix      = parsed_args.cldpix
+    sdpix       = parsed_args.sdpix
+    snpix       = parsed_args.snpix
+    outdir      = parsed_args.outdir
+
+    logger.setLevel(logging.INFO)
+    logging.basicConfig()
+    run_FMask(mtl, outdir, cldprob, cldpix, sdpix, snpix)
+
+
